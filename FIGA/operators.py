@@ -34,7 +34,7 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, 
             i += 1
 
     child_solution.calculate_nodes_time_windows(instance)
-    child_solution.calculate_vehicles_loads(instance)
+    child_solution.calculate_vehicles_loads()
 
     return child_solution
 
@@ -80,7 +80,7 @@ def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_ve
             # that is if no feasible insertion point was found, otherwise it will equal the fittest feasible insertion point
             crossover_solution.vehicles[best_vehicle].destinations.insert(best_position, copy.deepcopy(parent_destination))
 
-        crossover_solution.vehicles[best_vehicle].calculate_vehicle_load(instance)
+        crossover_solution.vehicles[best_vehicle].calculate_vehicle_load()
         crossover_solution.vehicles[best_vehicle].calculate_destinations_time_windows(instance)
         crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)
 

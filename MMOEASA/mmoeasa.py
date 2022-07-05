@@ -39,7 +39,7 @@ def TWIH(instance: ProblemInstance) -> Union[MMOEASASolution, OmbukiSolution]:
         solution.vehicles.append(vehicle)
 
     solution.calculate_nodes_time_windows(instance)
-    solution.calculate_vehicles_loads(instance)
+    solution.calculate_vehicles_loads()
     solution.calculate_length_of_routes(instance)
     solution.objective_function(instance)
 

@@ -177,7 +177,7 @@ def modified_feasible_network_transformation(instance: ProblemInstance, solution
             if not feasible_insertion:
                 v = first_attempted_vehicle
 
-    transformed_solution.calculate_vehicles_loads(instance)
+    transformed_solution.calculate_vehicles_loads()
     transformed_solution.calculate_length_of_routes(instance)
     transformed_solution.calculate_nodes_time_windows(instance)
     transformed_solution.objective_function(instance)

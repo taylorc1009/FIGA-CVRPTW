@@ -182,7 +182,7 @@ def mutation8(instance: ProblemInstance, solution: Union[MMOEASASolution, Ombuki
             del solution.vehicles[random_vehicle].destinations[origin_position:-1]
 
         solution.calculate_nodes_time_windows(instance)
-        solution.calculate_vehicles_loads(instance)
+        solution.calculate_vehicles_loads()
         solution.calculate_length_of_routes(instance)
         solution.objective_function(instance)
 
@@ -203,7 +203,7 @@ def mutation9(instance: ProblemInstance, solution: Union[MMOEASASolution, Ombuki
             del solution.vehicles[random_vehicle].destinations[origin_position]
 
         solution.calculate_nodes_time_windows(instance)
-        solution.calculate_vehicles_loads(instance)
+        solution.calculate_vehicles_loads()
         solution.calculate_length_of_routes(instance)
         solution.objective_function(instance)
 

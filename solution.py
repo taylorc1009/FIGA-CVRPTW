@@ -17,9 +17,9 @@ class Solution:
         for i, _ in enumerate(self.vehicles):
             self.vehicles[i].calculate_destinations_time_windows(instance)
 
-    def calculate_vehicles_loads(self, instance: ProblemInstance) -> None:
+    def calculate_vehicles_loads(self) -> None:
         for i, _ in enumerate(self.vehicles):
-            self.vehicles[i].calculate_vehicle_load(instance)
+            self.vehicles[i].calculate_vehicle_load()
 
     def calculate_length_of_routes(self, instance: ProblemInstance) -> None:
         for i, _ in enumerate(self.vehicles):

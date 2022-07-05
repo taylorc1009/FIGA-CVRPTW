@@ -37,7 +37,7 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: Union[OmbukiSo
             i += 1
 
     crossover_solution.calculate_nodes_time_windows(instance)
-    crossover_solution.calculate_vehicles_loads(instance)
+    crossover_solution.calculate_vehicles_loads()
 
     return crossover_solution
 
@@ -76,7 +76,7 @@ def original_crossover_thread(instance: ProblemInstance, solution: Union[OmbukiS
         else:
             crossover_solution.vehicles[best_vehicle].destinations.insert(best_position, copy.deepcopy(parent_destination))
 
-        crossover_solution.vehicles[best_vehicle].calculate_vehicle_load(instance)
+        crossover_solution.vehicles[best_vehicle].calculate_vehicle_load()
         crossover_solution.vehicles[best_vehicle].calculate_destinations_time_windows(instance)
         crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)
 
@@ -125,7 +125,7 @@ def modified_crossover_thread(instance: ProblemInstance, solution: Union[OmbukiS
         else:
             crossover_solution.vehicles[best_vehicle].destinations.insert(best_position, copy.deepcopy(parent_destination))
 
-        crossover_solution.vehicles[best_vehicle].calculate_vehicle_load(instance)
+        crossover_solution.vehicles[best_vehicle].calculate_vehicle_load()
         crossover_solution.vehicles[best_vehicle].calculate_destinations_time_windows(instance)
         crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)
 
@@ -196,7 +196,7 @@ def mutation(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASAS
     reversed_destinations = list(reversed(reversed_destinations))
     set_next_vehicles_destinations(solution, vehicle_num, first_destination, num_nodes_to_swap, reversed_destinations)
 
-    solution.vehicles[vehicle_num].calculate_vehicle_load(instance)
+    solution.vehicles[vehicle_num].calculate_vehicle_load()
     solution.vehicles[vehicle_num].calculate_destinations_time_windows(instance)
     solution.vehicles[vehicle_num].calculate_length_of_route(instance)
     solution.objective_function(instance)

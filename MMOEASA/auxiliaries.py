@@ -75,7 +75,7 @@ def insert_unvisited_node(solution: Union[MMOEASASolution, OmbukiSolution], inst
 
         # the calculations needed so that another invocation of "insert_unvisited_nodes()" will have the correct time windows when determining where to insert the next unvisited node
         solution.vehicles[vehicle].calculate_destinations_time_windows(instance)
-        solution.vehicles[vehicle].calculate_vehicle_load(instance)
+        solution.vehicles[vehicle].calculate_vehicle_load()
         solution.vehicles[vehicle].calculate_length_of_route(instance)
     else:
         num_customers = solution.vehicles[vehicle].get_num_of_customers_visited()
