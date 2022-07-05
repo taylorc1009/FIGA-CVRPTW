@@ -2,7 +2,7 @@ import copy
 import time
 import random
 from typing import List, Dict, Tuple
-from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
+from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
@@ -98,7 +98,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         return crossover_solution
     return parent_one
 
-def try_mutation(instance, solution: FIGASolution, mutation_probability: int) -> FIGASolution:
+def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int) -> FIGASolution:
     if rand(1, 100) < mutation_probability:
         global mutation_invocations, mutation_successes
         mutation_invocations += 1
@@ -162,6 +162,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
 
     global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes
     statistics = {
+        "iterations": iterations,
         "initialiser_execution_time": f"{initialiser_execution_time} milliseconds",
         "feasible_initialisations": feasible_initialisations,
         "crossover_invocations": crossover_invocations,
