@@ -91,6 +91,6 @@ if __name__ == '__main__':
             print(f"{os.linesep + str(solution)}")
         print(f"{os.linesep}Algorithm \"{sys.argv[1]}'s\" statistics:")
         for statistic, value in statistics.items():
-            print(f" - {statistic}: {value}")
+            print(f" - {statistic}: {str(value)}")
         print(f"{os.linesep + str(problem_instance)}")
         calculate_area(problem_instance, nondominated_set, sys.argv[3])

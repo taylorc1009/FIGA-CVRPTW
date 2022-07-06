@@ -18,7 +18,7 @@ feasible_initialisations: int=0
 crossover_invocations: int=0
 crossover_successes: int=0
 mutation_invocations: int=0
-mutation_successes: int=0
+mutation_successes: Dict[int, int]={}
 
 def DTWIH(instance: ProblemInstance) -> FIGASolution:
     sorted_nodes = sorted([node for _, node in instance.nodes.items() if node.number], key=lambda n: n.ready_time) # sort every available node by their ready_time
@@ -146,7 +146,10 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
 
         if is_nondominated(solution, mutated_solution):
-            mutation_successes += 1
+            if not probability in mutation_successes:
+                mutation_successes[probability] = 1
+            else:
+                mutation_successes[probability] += 1
             return mutated_solution
     return solution
 
@@ -193,7 +196,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         "crossover_invocations": crossover_invocations,
         "crossover_successes": crossover_successes,
         "mutation_invocations": mutation_invocations,
-        "mutation_successes": mutation_successes
+        "mutation_successes": mutation_successes,
+        "total_successful_mutations": sum(mutation_successes.values())
     }
 
     return nondominated_set, statistics
