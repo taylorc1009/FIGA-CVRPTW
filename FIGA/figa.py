@@ -83,6 +83,28 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                     i = 20 # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
                 del nondominated_set[i:]
 
+def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
+    i = 0
+
+    while i < len(solution.vehicles) and len(solution.vehicles) < instance.amount_of_vehicles:
+        for j, destination in enumerate(solution.vehicles[i].get_customers_visited(), 1):
+            if destination.arrival_time > destination.node.due_date:
+                solution.vehicles.insert(i + 1, Vehicle.create_route(instance, solution.vehicles[i].destinations[j:-1]))
+                del solution.vehicles[i].destinations[j:-1]
+
+                solution.vehicles[i].calculate_vehicle_load()
+                solution.vehicles[i].calculate_length_of_route(instance)
+                solution.vehicles[i].calculate_destination_time_window(instance, j - 1, j)
+
+                solution.vehicles[i + 1].calculate_vehicle_load()
+                solution.vehicles[i + 1].calculate_length_of_route(instance)
+                solution.vehicles[i + 1].calculate_destinations_time_windows(instance)
+
+                break
+        i += 1
+
+    solution.objective_function(instance)
+
 def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution]) -> FIGASolution:
     return random.choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
 
@@ -147,6 +169,9 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     while not terminate:
         crossover_parent_two = selection_tournament(nondominated_set, population)
         for s, solution in enumerate(population):
+            if not solution.feasible:
+                attempt_time_window_based_reorder(instance, solution)
+
             child = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
             child = try_mutation(instance, child, mutation_probability)
 
