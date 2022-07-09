@@ -184,9 +184,9 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         iterations += 1
 
         if termination_type == "iterations":
-            terminate = check_iterations_termination_condition(iterations, termination_condition, len(nondominated_set))
+            terminate = check_iterations_termination_condition(iterations, termination_condition, len(nondominated_set), population)
         elif termination_type == "seconds":
-            terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set))
+            terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population)
 
     global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes
     statistics = {
@@ -196,7 +196,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         "crossover_invocations": crossover_invocations,
         "crossover_successes": crossover_successes,
         "mutation_invocations": mutation_invocations,
-        "mutation_successes": mutation_successes,
+        "mutation_successes": dict(sorted(mutation_successes.items())),
         "total_successful_mutations": sum(mutation_successes.values())
     }
 
