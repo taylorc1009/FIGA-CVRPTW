@@ -289,7 +289,8 @@ def ATBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
                 longest_waiting_vehicle, longest_waiting_position, longest_wait_time = v, d, destination.wait_time
 
     # ... move the most "time-window-threatened" destination before it
-    solution.vehicles[longest_waiting_vehicle].destinations.insert(longest_waiting_position, solution.vehicles[worst_route].destinations.pop(worst_position))
+    if longest_waiting_vehicle is not None and longest_waiting_position is not None:
+        solution.vehicles[longest_waiting_vehicle].destinations.insert(longest_waiting_position, solution.vehicles[worst_route].destinations.pop(worst_position))
 
     solution.calculate_length_of_routes(instance)
     solution.calculate_vehicles_loads()

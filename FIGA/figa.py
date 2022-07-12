@@ -147,7 +147,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         elif probability == 9:
             mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
         elif probability == 10:
-            mutated_solution == ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
+            mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:
