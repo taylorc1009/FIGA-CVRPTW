@@ -1,6 +1,6 @@
 import copy
 from random import shuffle
-from typing import List
+from typing import List, Tuple
 from FIGA.constants import MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from common import INT_MAX, rand
@@ -233,3 +233,67 @@ def TWBMF_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASol
 
 def TWBPB_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Push-back Mutator
     return move_destination_to_fit_window(instance, solution, reverse=True)
+
+def TWBLC_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Local Crossover Mutator
+    random_vehicle = solution.vehicles[rand(0, len(solution.vehicles) - 1)]
+    best_vehicle, best_position = None, None # will always be given a value as it's practically impossible to arrive at every destination exactly when their time windows open
+
+    # best point from one vehicle would be where the arrival time is nearest a destination's ready_time
+    best_ready_time_difference = INT_MAX # the best position would have a very small difference between the arrival time and the destination's ready_time
+    for v, vehicle in enumerate(solution.vehicles):
+        if vehicle is not random_vehicle:
+            for destination_of_random in random_vehicle.get_customers_visited():
+                for d, destination in enumerate(vehicle.get_customers_visited(), 1): # don't start from the leave-depot node (0) as then we would just be swapping the entire route (instead of crossing it over) if that point is the best fit
+                    arrival_time = destination.departure_time + instance.get_distance(destination.node.number, destination_of_random.node.number)
+                    ready_time_difference = abs(destination_of_random.node.ready_time - arrival_time)
+                    if arrival_time <= destination_of_random.node.due_date and ready_time_difference < best_ready_time_difference:
+                        #if ready_time_difference >= best_ready_time_difference: # for performance: theoretically, when the best point has been found, the difference of the current iteration will be higher the difference of the best 
+                        #    break
+                        best_ready_time_difference, best_vehicle, best_position = ready_time_difference, v, d
+
+    if best_vehicle is not None and best_position is not None:
+        for d, destination in enumerate(random_vehicle.get_customers_visited(), 1):
+            if destination.departure_time + instance.get_distance(destination.node.number, solution.vehicles[best_vehicle].destinations[best_position].node.number) < solution.vehicles[best_vehicle].destinations[best_position].node.due_date:
+                # slice the randomly selected vehicle's and the best-fitting vehicle's destinations lists from both points where it's feasible to cross them over, then crossover
+                random_vehicle.destinations[d:-1], solution.vehicles[best_vehicle].destinations[best_position:-1] = solution.vehicles[best_vehicle].destinations[best_position:-1], random_vehicle.destinations[d:-1]
+                break
+
+        solution.calculate_length_of_routes(instance)
+        solution.calculate_vehicles_loads()
+        solution.calculate_nodes_time_windows(instance)
+        solution.objective_function(instance)
+
+    return solution
+
+def find_time_window_threatened_position(solution: FIGASolution) -> Tuple[int, int]:
+    worst_route, worst_position, riskiest_difference = None, None, INT_MAX
+
+    # find an infeasible route; if none are infeasible, select the destination with the smallest difference between its arrival time and its due date
+    for v, vehicle in enumerate(solution.vehicles):
+        for d, destination in enumerate(vehicle.get_customers_visited(), 1):
+            if destination.arrival_time > destination.node.due_date:
+                return v, d # any infeasible destination is bad, so return any
+            elif destination.node.due_date - destination.arrival_time < riskiest_difference: # the difference (minus calculation) will never be negative if the arrival time is not greater than the due date
+                worst_route, worst_position, riskiest_difference = v, d, destination.node.due_date - destination.arrival_time
+
+    return worst_route, worst_position
+
+def ATBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Arrival-Time-based Reorder Mutator
+    worst_route, worst_position = find_time_window_threatened_position(solution)
+    longest_waiting_vehicle, longest_waiting_position, longest_wait_time = None, None, 0
+
+    # find the destination with the longest wait time and...
+    for v, vehicle in enumerate(solution.vehicles):
+        for d, destination in enumerate(vehicle.get_customers_visited(), 1):
+            if destination.wait_time > longest_wait_time and vehicle.current_capacity + solution.vehicles[worst_route].destinations[worst_position].node.demand <= instance.capacity_of_vehicles:
+                longest_waiting_vehicle, longest_waiting_position, longest_wait_time = v, d, destination.wait_time
+
+    # ... move the most "time-window-threatened" destination before it
+    solution.vehicles[longest_waiting_vehicle].destinations.insert(longest_waiting_position, solution.vehicles[worst_route].destinations.pop(worst_position))
+
+    solution.calculate_length_of_routes(instance)
+    solution.calculate_vehicles_loads()
+    solution.calculate_nodes_time_windows(instance)
+    solution.objective_function(instance)
+
+    return solution

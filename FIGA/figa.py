@@ -7,7 +7,7 @@ from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import crossover, TWBS_mutation, TWBSw_mutation, WTBS_mutation, SWTBS_mutation, DBS_mutation, SDBS_mutation, TWBMF_mutation, TWBPB_mutation
+from FIGA.operators import ATBR_mutation, TWBLC_mutation, crossover, TWBS_mutation, TWBSw_mutation, WTBS_mutation, SWTBS_mutation, DBS_mutation, SDBS_mutation, TWBMF_mutation, TWBPB_mutation
 from FIGA.constants import TOURNAMENT_PROBABILITY_SELECT_BEST
 from vehicle import Vehicle
 from numpy import ceil, random
@@ -126,7 +126,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(1, 8)
+        probability = rand(1, 10)
 
         if probability == 1:
             mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Sort Mutator
@@ -144,6 +144,10 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
         elif probability == 8:
             mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
+        elif probability == 9:
+            mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
+        elif probability == 10:
+            mutated_solution == ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:
@@ -177,6 +181,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
 
             child = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
             child = try_mutation(instance, child, mutation_probability)
+            child.check_format_is_correct(instance)
 
             if not solution.feasible or is_nondominated(solution, child):
                 population[s] = child
