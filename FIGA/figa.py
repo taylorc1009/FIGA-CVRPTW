@@ -181,7 +181,6 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
 
             child = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
             child = try_mutation(instance, child, mutation_probability)
-            child.check_format_is_correct(instance)
 
             if not solution.feasible or is_nondominated(solution, child):
                 population[s] = child
