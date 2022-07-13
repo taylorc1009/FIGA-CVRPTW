@@ -13,7 +13,7 @@ class Solution:
         # ranking used in Ombuki's Algorithm; exists in the parent class for when Ombuki's Algorithm is solving MMOEASA's objective function
         self.rank: int=int(rank)
 
-    def calculate_nodes_time_windows(self, instance: ProblemInstance) -> None:
+    def calculate_routes_time_windows(self, instance: ProblemInstance) -> None:
         for i, _ in enumerate(self.vehicles):
             self.vehicles[i].calculate_destinations_time_windows(instance)
 

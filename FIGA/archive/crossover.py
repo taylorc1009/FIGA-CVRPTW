@@ -43,7 +43,7 @@ def initialise_decision_tree_prerequisites(instance: ProblemInstance, parent_one
         if increment:
             i += 1
 
-    crossover_solution.calculate_nodes_time_windows(instance)
+    crossover_solution.calculate_routes_time_windows(instance)
     crossover_solution.calculate_vehicles_loads()
 
     return crossover_solution, nodes_to_insert, parent_two_destinations
@@ -95,7 +95,7 @@ def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: F
 
     print(f"{round(time.time() - start, 1)}s", copy_is)
     crossover_solution.calculate_length_of_routes(instance)
-    crossover_solution.calculate_nodes_time_windows(instance)
+    crossover_solution.calculate_routes_time_windows(instance)
     crossover_solution.calculate_vehicles_loads()
     crossover_solution.objective_function(instance)
 
@@ -151,7 +151,7 @@ def crossover_multithreaded(instance: ProblemInstance, parent_one: FIGASolution,
     print(f"{round(time.time() - start, 1)}s", crossover_solution_copy is crossover_solution)
 
     crossover_solution.calculate_length_of_routes(instance)
-    crossover_solution.calculate_nodes_time_windows(instance)
+    crossover_solution.calculate_routes_time_windows(instance)
     crossover_solution.calculate_vehicles_loads()
     crossover_solution.objective_function(instance)
 

@@ -33,7 +33,7 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, 
         if increment: # don't move to the next vehicle if an empty one was deleted
             i += 1
 
-    child_solution.calculate_nodes_time_windows(instance)
+    child_solution.calculate_routes_time_windows(instance)
     child_solution.calculate_vehicles_loads()
 
     return child_solution
@@ -260,7 +260,7 @@ def TWBLC_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASol
 
         solution.calculate_length_of_routes(instance)
         solution.calculate_vehicles_loads()
-        solution.calculate_nodes_time_windows(instance)
+        solution.calculate_routes_time_windows(instance)
         solution.objective_function(instance)
 
     return solution
@@ -294,7 +294,7 @@ def ATBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 
     solution.calculate_length_of_routes(instance)
     solution.calculate_vehicles_loads()
-    solution.calculate_nodes_time_windows(instance)
+    solution.calculate_routes_time_windows(instance)
     solution.objective_function(instance)
 
     return solution

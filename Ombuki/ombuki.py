@@ -41,7 +41,7 @@ def generate_random_solution(instance: ProblemInstance) -> Union[OmbukiSolution,
                 infeasible_vehicles.add(vehicle)
 
     solution.calculate_length_of_routes(instance)
-    solution.calculate_nodes_time_windows(instance)
+    solution.calculate_routes_time_windows(instance)
     solution.objective_function(instance)
 
     return solution
@@ -79,7 +79,7 @@ def generate_greedy_solution(instance: ProblemInstance) -> Union[OmbukiSolution,
                 break
 
     solution.calculate_length_of_routes(instance)
-    solution.calculate_nodes_time_windows(instance)
+    solution.calculate_routes_time_windows(instance)
     solution.objective_function(instance)
 
     return solution
@@ -179,7 +179,7 @@ def modified_feasible_network_transformation(instance: ProblemInstance, solution
 
     transformed_solution.calculate_vehicles_loads()
     transformed_solution.calculate_length_of_routes(instance)
-    transformed_solution.calculate_nodes_time_windows(instance)
+    transformed_solution.calculate_routes_time_windows(instance)
     transformed_solution.objective_function(instance)
 
     return transformed_solution

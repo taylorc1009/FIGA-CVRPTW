@@ -46,7 +46,7 @@ def DTWIH(instance: ProblemInstance) -> FIGASolution:
             solution.vehicles[index].current_capacity += nodes_to_insert[i].demand
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
 
-    solution.calculate_nodes_time_windows(instance)
+    solution.calculate_routes_time_windows(instance)
     solution.calculate_length_of_routes(instance)
     solution.objective_function(instance)
 

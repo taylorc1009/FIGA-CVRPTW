@@ -36,7 +36,7 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: Union[OmbukiSo
         if increment:
             i += 1
 
-    crossover_solution.calculate_nodes_time_windows(instance)
+    crossover_solution.calculate_routes_time_windows(instance)
     crossover_solution.calculate_vehicles_loads()
 
     return crossover_solution
