@@ -10,7 +10,7 @@ from problemInstance import ProblemInstance
 from destination import Destination
 from vehicle import Vehicle
 from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
-from typing import List, Tuple, Union, Dict
+from typing import Deque, List, Tuple, Union, Dict
 from numpy import sqrt, exp
 
 initialiser_execution_time: int=0
@@ -131,7 +131,7 @@ def mo_metropolis(instance: ProblemInstance, parent: MMOEASASolution, child: MMO
         else:
             return parent
 
-def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
+def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
     population: List[Union[MMOEASASolution, OmbukiSolution]] = list()
     nondominated_set: List[Union[MMOEASASolution, OmbukiSolution]] = list()
 
@@ -199,9 +199,9 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
             iterations += 1
 
             if termination_type == "iterations":
-                terminate = check_iterations_termination_condition(iterations, termination_condition * multi_starts, len(nondominated_set), population)
+                terminate = check_iterations_termination_condition(iterations, termination_condition * multi_starts, len(nondominated_set), population, progress_indication_steps)
             elif termination_type == "seconds":
-                terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population)
+                terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population, progress_indication_steps)
 
     global crossover_invocations, mutation_invocations
     statistics = {

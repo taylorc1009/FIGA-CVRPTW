@@ -5,6 +5,7 @@ MULTI_STARTS: Final[int]=10
 TERMINATION_CONDITION_ITERATIONS: Final[int]=200 # if you use "iterations" as the termination condition, then the number of iterations that will be performed will be equal to TERMINATION_CONDITION_ITERATIONS * MULTI_STARTS
 TERMINATION_CONDITION_SECONDS: Final[int]=600
 TERMINATION_CONDITION_TYPE: Final[str]="seconds" # can also be set to "iterations", thus using the TERMINATION_CONDITION_ITERATIONS parameter instead of TERMINATION_CONDITION_SECONDS
+NUM_PROGRESS_OUTPUTS: Final[int]=10 # number of times you wish to print the population/non-dominated set's state during runtime
 CROSSOVER_PROBABILITY: Final[int]=25 # 25%
 MUTATION_PROBABILITY: Final[int]=25 # 25%
 TEMPERATURE_MAX: Final[float]=100.0

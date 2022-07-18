@@ -1,6 +1,6 @@
 from time import process_time
-from typing import Final, List, Set
-from numpy import random, floor
+from typing import Deque, Final, List, Set
+from numpy import random
 
 INT_MAX: Final[int]=2147483647
 
@@ -12,12 +12,10 @@ def rand(start: int, end: int, exclude_values: Set[int]=None) -> int:
         random_val = random.randint(start, end + offset)
     return random_val
 
-def check_seconds_termination_condition(start: float, termination_condition: int, nondominated_set_length: int, population: List) -> bool:
+def check_seconds_termination_condition(start: float, termination_condition: int, nondominated_set_length: int, population: List, progress_indication_steps: Deque[float]) -> bool:
     time_taken = process_time() - start
-    # it's slightly difficult to output only one measurement of the time taken
-    # the only way would be to create a list of times that a measurement should be outputted at and determine whether an output has been made for that time
-    # but that would be more bother than it's worth
-    if not floor(time_taken % (termination_condition / 10)):
+    if progress_indication_steps and time_taken >= progress_indication_steps[0]:
+        progress_indication_steps.popleft()
         unique_solutions: Set[str] = set()
         for solution in population:
             objectives = ""
@@ -30,8 +28,9 @@ def check_seconds_termination_condition(start: float, termination_condition: int
         print(f"time_taken={round(time_taken, 1)}s, {nondominated_set_length=}, {len(unique_solutions)=}")
     return not time_taken < termination_condition
 
-def check_iterations_termination_condition(iterations: int, termination_condition: int, nondominated_set_length: int, population: List) -> bool:
-    if not iterations % (termination_condition / 10):
+def check_iterations_termination_condition(iterations: int, termination_condition: int, nondominated_set_length: int, population: List, progress_indication_steps: Deque[float]) -> bool:
+    if progress_indication_steps and iterations >= progress_indication_steps[0]:
+        progress_indication_steps.popleft()
         unique_solutions: Set[str] = set()
         for solution in population:
             objectives = ""

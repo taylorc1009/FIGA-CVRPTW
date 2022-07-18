@@ -1,6 +1,6 @@
 import copy
 from time import process_time
-from typing import List, Union, Dict, Tuple
+from typing import Deque, List, Union, Dict, Tuple
 from Ombuki.operators import crossover, mutation
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 from problemInstance import ProblemInstance
@@ -295,7 +295,7 @@ def mutation_probability(instance: ProblemInstance, solution: Union[OmbukiSoluti
             return mutated_solution
     return solution
 
-def Ombuki(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover: int, mutation: int, use_original: bool) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
+def Ombuki(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover: int, mutation: int, use_original: bool, progress_indication_steps: Deque[float]) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
     population: List[Union[OmbukiSolution, MMOEASASolution]] = list()
 
     global initialiser_execution_time, feasible_initialisations
@@ -338,9 +338,9 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
         iterations += 1
 
         if termination_type == "iterations":
-            terminate = check_iterations_termination_condition(iterations, termination_condition, num_rank_ones, population)
+            terminate = check_iterations_termination_condition(iterations, termination_condition, num_rank_ones, population, progress_indication_steps)
         elif termination_type == "seconds":
-            terminate = check_seconds_termination_condition(start, termination_condition, num_rank_ones, population)
+            terminate = check_seconds_termination_condition(start, termination_condition, num_rank_ones, population, progress_indication_steps)
 
     global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes
     statistics = {

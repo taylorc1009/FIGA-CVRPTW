@@ -1,6 +1,6 @@
 import copy
 from time import process_time
-from typing import List, Dict, Tuple
+from typing import Deque, List, Dict, Tuple
 from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle
 from destination import Destination
@@ -156,7 +156,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             return mutated_solution
     return solution
 
-def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int) -> Tuple[List[FIGASolution], Dict[str, int]]:
+def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, progress_indication_steps: Deque[float]) -> Tuple[List[FIGASolution], Dict[str, int]]:
     population: List[FIGASolution] = list()
     nondominated_set: List[FIGASolution] = list()
 
@@ -187,9 +187,9 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         iterations += 1
 
         if termination_type == "iterations":
-            terminate = check_iterations_termination_condition(iterations, termination_condition, len(nondominated_set), population)
+            terminate = check_iterations_termination_condition(iterations, termination_condition, len(nondominated_set), population, progress_indication_steps)
         elif termination_type == "seconds":
-            terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population)
+            terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population, progress_indication_steps)
 
     global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes
     statistics = {
