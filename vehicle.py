@@ -35,10 +35,10 @@ class Vehicle:
             self.calculate_destination_time_window(instance, i - 1, i)
 
     def calculate_vehicle_load(self) -> None:
-        self.current_capacity = sum([destination.node.demand for destination in self.get_customers_visited()])
+        self.current_capacity = sum(destination.node.demand for destination in self.get_customers_visited())
 
     def calculate_length_of_route(self, instance: ProblemInstance) -> None:
-        self.route_distance = sum([instance.get_distance(self.destinations[i - 1].node.number, self.destinations[i].node.number) for i in range(1, len(self.destinations))])
+        self.route_distance = sum(instance.get_distance(self.destinations[i - 1].node.number, self.destinations[i].node.number) for i in range(1, len(self.destinations)))
 
     def __deepcopy__(self, memodict: Dict=None) -> "Vehicle":
         return Vehicle(current_capacity=self.current_capacity, route_distance=self.route_distance, destinations=[copy.deepcopy(d) for d in self.destinations])

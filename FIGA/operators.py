@@ -103,10 +103,7 @@ def select_route_with_longest_wait(solution: FIGASolution) -> int:
     if rand(1, 100) < MUTATION_LONGEST_WAIT_PROBABILITY:
         for v, vehicle in enumerate(solution.vehicles):
             if vehicle.get_num_of_customers_visited() > 1:
-                total_wait = 0.0
-
-                for destination in vehicle.get_customers_visited():
-                    total_wait += destination.wait_time
+                total_wait = sum(destination.wait_time for destination in vehicle.get_customers_visited())
 
                 if total_wait > longest_total_wait:
                     longest_waiting_vehicle = v
