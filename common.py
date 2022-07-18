@@ -1,4 +1,4 @@
-import time
+from time import process_time
 from typing import Final, List, Set
 from numpy import random, floor
 
@@ -13,7 +13,7 @@ def rand(start: int, end: int, exclude_values: Set[int]=None) -> int:
     return random_val
 
 def check_seconds_termination_condition(start: float, termination_condition: int, nondominated_set_length: int, population: List) -> bool:
-    time_taken = time.time() - start
+    time_taken = process_time() - start
     # it's slightly difficult to output only one measurement of the time taken
     # the only way would be to create a list of times that a measurement should be outputted at and determine whether an output has been made for that time
     # but that would be more bother than it's worth

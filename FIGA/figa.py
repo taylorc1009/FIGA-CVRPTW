@@ -1,8 +1,7 @@
 import copy
-import time
-import random
+from time import process_time
 from typing import List, Dict, Tuple
-from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
+from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
@@ -162,15 +161,15 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     nondominated_set: List[FIGASolution] = list()
 
     global initialiser_execution_time, feasible_initialisations
-    initialiser_execution_time = time.time()
+    initialiser_execution_time = process_time()
     for i in range(0, population_size):
         population.insert(i, DTWIH(instance))
         population[i].id = i
         if population[i].feasible:
             feasible_initialisations += 1
-    initialiser_execution_time = round((time.time() - initialiser_execution_time) * 1000, 3)
+    initialiser_execution_time = round((process_time() - initialiser_execution_time) * 1000, 3)
 
-    start = time.time()
+    start = process_time()
     terminate = False
     iterations = 0
     while not terminate:

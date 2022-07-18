@@ -1,5 +1,5 @@
 import copy
-import time
+from time import process_time
 from typing import List, Union, Dict, Tuple
 from Ombuki.operators import crossover, mutation
 from MMOEASA.mmoeasaSolution import MMOEASASolution
@@ -299,7 +299,7 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
     population: List[Union[OmbukiSolution, MMOEASASolution]] = list()
 
     global initialiser_execution_time, feasible_initialisations
-    initialiser_execution_time = time.time()
+    initialiser_execution_time = process_time()
     num_greedy_solutions = int(round(float(population_size * GREEDY_PERCENT))) # by default, "GREEDY_PERCENT" is 10%, so 10% of the population (30 as 300 * 0.1) will be greedy solutions ...
     for i in range(0, num_greedy_solutions):
         greedy_solution = generate_greedy_solution(instance)
@@ -313,9 +313,9 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
         if random_solution.feasible:
             feasible_initialisations += 1
         population.insert(i, random_solution)
-    initialiser_execution_time = round((time.time() - initialiser_execution_time) * 1000, 3)
+    initialiser_execution_time = round((process_time() - initialiser_execution_time) * 1000, 3)
 
-    start = time.time()
+    start = process_time()
     terminate = False
     iterations = 0
     while not terminate:
