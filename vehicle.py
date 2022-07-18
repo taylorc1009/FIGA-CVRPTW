@@ -23,7 +23,7 @@ class Vehicle:
         previous_node = self.destinations[previous_destination].node.number
         current_node = self.destinations[current_destination].node.number
         self.destinations[current_destination].arrival_time = self.destinations[previous_destination].departure_time + instance.get_distance(previous_node, current_node)
-        if self.destinations[current_destination].arrival_time < instance.nodes[current_node].ready_time:  # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
+        if self.destinations[current_destination].arrival_time < instance.nodes[current_node].ready_time: # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
             self.destinations[current_destination].wait_time = instance.nodes[current_node].ready_time - self.destinations[current_destination].arrival_time
             self.destinations[current_destination].arrival_time = instance.nodes[current_node].ready_time
         else:
