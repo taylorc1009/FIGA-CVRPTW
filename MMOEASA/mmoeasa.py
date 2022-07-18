@@ -199,9 +199,9 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
             iterations += 1
 
             if termination_type == "iterations":
-                terminate = check_iterations_termination_condition(iterations, termination_condition * multi_starts, len(nondominated_set))
+                terminate = check_iterations_termination_condition(iterations, termination_condition * multi_starts, len(nondominated_set), population)
             elif termination_type == "seconds":
-                terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set))
+                terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population)
 
     global crossover_invocations, mutation_invocations
     statistics = {
