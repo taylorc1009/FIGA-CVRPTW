@@ -27,8 +27,8 @@ class Solution:
 
     def check_format_is_correct(self, instance: ProblemInstance) -> None:
         # error checks to ensure that every route is of the valid format
-        if sum([v.get_num_of_customers_visited() for v in self.vehicles]) != len(instance.nodes) - 1: # check if the solution contains the correct amount of destinations, in that it visits all of them
-            raise ValueError(f"Mismatched amount of destinations: {sum([v.get_num_of_customers_visited() for v in self.vehicles])}")
+        if sum(v.get_num_of_customers_visited() for v in self.vehicles) != len(instance.nodes) - 1: # check if the solution contains the correct amount of destinations, in that it visits all of them
+            raise ValueError(f"Mismatched amount of destinations: {sum(v.get_num_of_customers_visited() for v in self.vehicles)}")
         elif [v for v in self.vehicles if len(v.destinations) < 2]: # checks if all the routes has at least 2 destinations; routes should always at least depart from and return to the depot
             raise ValueError("Number of destinations was not at least 2")
         elif [v for v in self.vehicles if v.destinations[0].node.number or v.destinations[-1].node.number]: # checks that every route starts and ends at the depot
