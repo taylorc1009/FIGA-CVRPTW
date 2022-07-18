@@ -84,28 +84,28 @@ def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution
         mutation_invocations += 1
 
         solution_copy = copy.deepcopy(I) if pending_copy else I
-        probability = rand(1, 100)
 
-        if 1 <= probability <= 10:
-            return mutation1(instance, solution_copy), True
-        elif 11 <= probability <= 20:
-            return mutation2(instance, solution_copy), True
-        elif 21 <= probability <= 30:
-            return mutation3(instance, solution_copy), True
-        elif 31 <= probability <= 40:
-            return mutation4(instance, solution_copy), True
-        elif 41 <= probability <= 50:
-            return mutation5(instance, solution_copy), True
-        elif 51 <= probability <= 60:
-            return mutation6(instance, solution_copy), True
-        elif 61 <= probability <= 70:
-            return mutation7(instance, solution_copy), True
-        elif 71 <= probability <= 80:
-            return mutation8(instance, solution_copy), True
-        elif 81 <= probability <= 90:
-            return mutation9(instance, solution_copy), True
-        elif 91 <= probability <= 100:
-            return mutation10(instance, solution_copy), True
+        match rand(1, 10):
+            case 1:
+                return mutation1(instance, solution_copy), True
+            case 2:
+                return mutation2(instance, solution_copy), True
+            case 3:
+                return mutation3(instance, solution_copy), True
+            case 4:
+                return mutation4(instance, solution_copy), True
+            case 5:
+                return mutation5(instance, solution_copy), True
+            case 6:
+                return mutation6(instance, solution_copy), True
+            case 7:
+                return mutation7(instance, solution_copy), True
+            case 8:
+                return mutation8(instance, solution_copy), True
+            case 9:
+                return mutation9(instance, solution_copy), True
+            case 10:
+                return mutation10(instance, solution_copy), True
     return I, False
 
 def euclidean_distance_dispersion(instance: ProblemInstance, x1: float, y1: float, x2: float, y2: float) -> float:
