@@ -108,9 +108,9 @@ def select_route_with_longest_wait(solution: FIGASolution) -> int:
                 for destination in vehicle.get_customers_visited():
                     total_wait += destination.wait_time
 
-                    if total_wait > longest_total_wait:
-                        longest_waiting_vehicle = v
-                        longest_total_wait = total_wait
+                if total_wait > longest_total_wait:
+                    longest_waiting_vehicle = v
+                    longest_total_wait = total_wait
 
     # check if not >= 0 instead of using "else" in case no vehicle has a wait time; this will never be the case, but this is here to be safe
     return longest_waiting_vehicle if longest_waiting_vehicle >= 0 else select_random_vehicle(solution)
