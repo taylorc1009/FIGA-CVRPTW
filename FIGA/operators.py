@@ -1,7 +1,7 @@
 import copy
 from random import shuffle
 from typing import List, Tuple
-from FIGA.constants import MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY
+from FIGA.parameters import MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from common import INT_MAX, rand
 from problemInstance import ProblemInstance

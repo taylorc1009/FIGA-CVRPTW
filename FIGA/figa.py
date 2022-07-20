@@ -7,7 +7,7 @@ from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
 from FIGA.operators import ATBR_mutation, TWBLC_mutation, crossover, TWBS_mutation, TWBSw_mutation, WTBS_mutation, SWTBS_mutation, DBS_mutation, SDBS_mutation, TWBMF_mutation, TWBPB_mutation
-from FIGA.constants import TOURNAMENT_PROBABILITY_SELECT_BEST
+from FIGA.parameters import TOURNAMENT_PROBABILITY_SELECT_BEST
 from vehicle import Vehicle
 from numpy import ceil, random
 
