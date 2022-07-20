@@ -209,7 +209,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(1, 10)
+        probability = rand(1, 6)
 
         match probability:
             case 1:
@@ -217,21 +217,21 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 2:
                 mutated_solution = TWBSw_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 3:
-                mutated_solution = WTBS_mutation(instance, mutated_solution) # Wait-Time-based Swap Mutator
-            case 4:
-                mutated_solution = SWTBS_mutation(instance, mutated_solution) # Single Wait-Time-based Swap Mutator
-            case 5:
-                mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
-            case 6:
-                mutated_solution = SDBS_mutation(instance, mutated_solution) # Single Distance-based Swap Mutator
-            case 7:
                 mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
-            case 8:
+            case 4:
                 mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
-            case 9:
+            case 5:
                 mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
-            case 10:
+            case 6:
                 mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
+        """case 3:
+            mutated_solution = WTBS_mutation(instance, mutated_solution) # Wait-Time-based Swap Mutator
+        case 4:
+            mutated_solution = SWTBS_mutation(instance, mutated_solution) # Single Wait-Time-based Swap Mutator
+        case 5:
+            mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
+        case 6:
+            mutated_solution = SDBS_mutation(instance, mutated_solution) # Single Distance-based Swap Mutator"""
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:
