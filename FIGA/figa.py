@@ -20,7 +20,7 @@ mutation_invocations: int=0
 mutation_successes: Dict[int, int]={}
 
 def DTWIH(instance: ProblemInstance) -> FIGASolution:
-    sorted_nodes = sorted([node for _, node in instance.nodes.items() if node.number], key=lambda n: n.ready_time) # sort every available node by their ready_time
+    sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
     num_routes = int(ceil(instance.amount_of_vehicles / 2))
     solution = FIGASolution(_id=0, vehicles=[Vehicle.create_route(instance) for _ in range(0, num_routes)])
     additional_vehicles = 0
@@ -52,21 +52,21 @@ def DTWIH(instance: ProblemInstance) -> FIGASolution:
     return solution
 
 def DTWIH_II(instance: ProblemInstance) -> FIGASolution:
-    sorted_nodes = sorted([node for _, node in instance.nodes.items() if node.number], key=lambda n: n.ready_time) # sort every available node by their ready_time
-    num_routes = int(ceil(instance.amount_of_vehicles / 2))
+    sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
+    range_of_sorted_nodes = int(ceil(instance.amount_of_vehicles / 2))
     solution = FIGASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
 
     while sorted_nodes:
-        range_of_sorted_nodes = num_routes if num_routes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
-        nodes_to_insert = sorted_nodes[:range_of_sorted_nodes] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
-        shuffle(nodes_to_insert)
-        for i in range(range_of_sorted_nodes):
+        shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
+        shuffled_nodes_buffer = sorted_nodes[:shuffle_buffer_size] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
+        shuffle(shuffled_nodes_buffer)
+        for i in range(shuffle_buffer_size):
             inserted = False
             for v, vehicle in enumerate(solution.vehicles):
-                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + nodes_to_insert[i].demand > instance.capacity_of_vehicles:
+                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + shuffled_nodes_buffer[i].demand > instance.capacity_of_vehicles:
                     continue
                 previous_destination = vehicle.get_customers_visited()[-1]
-                new_destination = Destination(node=nodes_to_insert[i])
+                new_destination = Destination(node=shuffled_nodes_buffer[i])
                 new_destination.arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, new_destination.node.number)
                 if new_destination.arrival_time > new_destination.node.due_date:
                     continue
@@ -82,7 +82,7 @@ def DTWIH_II(instance: ProblemInstance) -> FIGASolution:
                 inserted = v, True
                 break
             if not inserted:
-                solution.vehicles.append(Vehicle.create_route(instance, nodes_to_insert[i]))
+                solution.vehicles.append(Vehicle.create_route(instance, shuffled_nodes_buffer[i]))
                 solution.vehicles[-1].calculate_destinations_time_windows(instance)
                 solution.vehicles[-1].calculate_vehicle_load()
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
@@ -94,19 +94,19 @@ def DTWIH_II(instance: ProblemInstance) -> FIGASolution:
     return solution
 
 def DTWIH_III(instance: ProblemInstance) -> FIGASolution:
-    sorted_nodes = sorted([node for _, node in instance.nodes.items() if node.number], key=lambda n: n.ready_time) # sort every available node by their ready_time
-    num_routes = int(ceil(instance.amount_of_vehicles / 2))
+    sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
+    range_of_sorted_nodes = int(ceil(instance.amount_of_vehicles / 2))
     solution = FIGASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
 
     while sorted_nodes:
-        range_of_sorted_nodes = num_routes if num_routes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
-        nodes_to_insert = sorted_nodes[:range_of_sorted_nodes] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
-        shuffle(nodes_to_insert)
-        for i in range(range_of_sorted_nodes):
-            node = nodes_to_insert[i]
+        shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
+        shuffled_nodes_buffer = sorted_nodes[:shuffle_buffer_size] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
+        shuffle(shuffled_nodes_buffer)
+        for i in range(shuffle_buffer_size):
+            node = shuffled_nodes_buffer[i]
             shortest_waiting_vehicle, lowest_wait_time_difference = instance.amount_of_vehicles, float(INT_MAX)
             for v, vehicle in enumerate(solution.vehicles):
-                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + nodes_to_insert[i].demand > instance.capacity_of_vehicles:
+                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + shuffled_nodes_buffer[i].demand > instance.capacity_of_vehicles:
                     continue
                 previous_destination = vehicle.get_customers_visited()[-1]
                 arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, node.number)
@@ -124,7 +124,7 @@ def DTWIH_III(instance: ProblemInstance) -> FIGASolution:
                 vehicle.calculate_destination_time_window(instance, -3, -2)
                 vehicle.calculate_destination_time_window(instance, -2, -1)
             else:
-                solution.vehicles.append(Vehicle.create_route(instance, nodes_to_insert[i]))
+                solution.vehicles.append(Vehicle.create_route(instance, shuffled_nodes_buffer[i]))
                 solution.vehicles[-1].calculate_destinations_time_windows(instance)
                 solution.vehicles[-1].calculate_vehicle_load()
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
