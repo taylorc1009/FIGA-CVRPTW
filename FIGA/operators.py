@@ -74,7 +74,7 @@ def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_ve
 
         if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles:
             best_vehicle = len(crossover_solution.vehicles)
-            crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination.node))
+            crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination))
         else:
             # best_vehicle and best_position will equal the insertion position before the vehicle with the longest wait time
             # that is if no feasible insertion point was found, otherwise it will equal the fittest feasible insertion point
