@@ -95,39 +95,33 @@ def DTWIH_II(instance: ProblemInstance) -> FIGASolution:
 
 def DTWIH_III(instance: ProblemInstance) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
-    range_of_sorted_nodes = int(ceil(instance.amount_of_vehicles / 2))
     solution = FIGASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
 
-    while sorted_nodes:
-        shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
-        shuffled_nodes_buffer = sorted_nodes[:shuffle_buffer_size] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
-        shuffle(shuffled_nodes_buffer)
-        for i in range(shuffle_buffer_size):
-            node = shuffled_nodes_buffer[i]
-            shortest_waiting_vehicle, lowest_wait_time_difference = instance.amount_of_vehicles, float(INT_MAX)
-            for v, vehicle in enumerate(solution.vehicles):
-                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + shuffled_nodes_buffer[i].demand > instance.capacity_of_vehicles:
-                    continue
-                previous_destination = vehicle.get_customers_visited()[-1]
-                arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, node.number)
-                if arrival_time > node.due_date:
-                    continue
-                if arrival_time < node.ready_time: # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
-                    arrival_time = node.ready_time
-                wait_time_difference = abs(arrival_time - node.ready_time)
-                if wait_time_difference < lowest_wait_time_difference:
-                    shortest_waiting_vehicle, lowest_wait_time_difference = v, wait_time_difference
-            if shortest_waiting_vehicle < instance.amount_of_vehicles:
-                vehicle = solution.vehicles[shortest_waiting_vehicle]
-                vehicle.destinations.insert(-1, Destination(node=node))
-                vehicle.current_capacity += node.demand
-                vehicle.calculate_destination_time_window(instance, -3, -2)
-                vehicle.calculate_destination_time_window(instance, -2, -1)
-            else:
-                solution.vehicles.append(Vehicle.create_route(instance, shuffled_nodes_buffer[i]))
-                solution.vehicles[-1].calculate_destinations_time_windows(instance)
-                solution.vehicles[-1].calculate_vehicle_load()
-        del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
+    for node in sorted_nodes:
+        shortest_waiting_vehicle, lowest_wait_time_difference = instance.amount_of_vehicles, float(INT_MAX)
+        shuffle(solution.vehicles)
+        for v, vehicle in enumerate(solution.vehicles):
+            if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + node.demand > instance.capacity_of_vehicles:
+                continue
+            previous_destination = vehicle.get_customers_visited()[-1]
+            arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, node.number)
+            if arrival_time > node.due_date:
+                continue
+            if arrival_time < node.ready_time: # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
+                arrival_time = node.ready_time
+            wait_time_difference = abs(arrival_time - node.ready_time)
+            if wait_time_difference < lowest_wait_time_difference:
+                shortest_waiting_vehicle, lowest_wait_time_difference = v, wait_time_difference
+        if shortest_waiting_vehicle < instance.amount_of_vehicles:
+            vehicle = solution.vehicles[shortest_waiting_vehicle]
+            vehicle.destinations.insert(-1, Destination(node=node))
+            vehicle.current_capacity += node.demand
+            vehicle.calculate_destination_time_window(instance, -3, -2)
+            vehicle.calculate_destination_time_window(instance, -2, -1)
+        else:
+            solution.vehicles.append(Vehicle.create_route(instance, node))
+            solution.vehicles[-1].calculate_destinations_time_windows(instance)
+            solution.vehicles[-1].calculate_vehicle_load()
 
     solution.calculate_routes_time_windows(instance)
     solution.calculate_length_of_routes(instance)
