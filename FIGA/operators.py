@@ -1,6 +1,6 @@
 import copy
 from random import shuffle
-from typing import List, Tuple
+from typing import List, Set, Tuple
 from FIGA.parameters import MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from common import INT_MAX, rand
@@ -124,8 +124,11 @@ def TWBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 
     return solution
 
-def swap(l: List, index_one: int, index_two: int) -> None:
-    l[index_one], l[index_two] = l[index_two], l[index_one]
+def swap(l1: List, index_one: int, index_two: int, l2: List=None) -> None:
+    if l2:
+        l1[index_one], l2[index_two] = l2[index_two], l1[index_one]
+    else:
+        l1[index_one], l1[index_two] = l1[index_two], l1[index_one]
 
 def TWBSw_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Swap Mutator
     longest_waiting_vehicle = select_route_with_longest_wait(solution)
@@ -172,30 +175,41 @@ def WTBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 def SWTBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Single Wait-Time-based Swap Mutator
     return swap_high_wait_time_destinations(instance, solution, just_once=True)
 
-def swap_long_distance_destinations(instance: ProblemInstance, solution: FIGASolution, just_once: bool=False) -> FIGASolution:
+def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]={}) -> int:
     longest_route_length = 0
-    furthest_travelling_vehicle = -1
+    furthest_traveling_vehicle = int() # this function will always assign a value to this variable
 
-    if rand(1, 100) < MUTATION_LONGEST_ROUTE_PROBABILITY:
-        # find the furthest travelling vehicle
+    if rand(1, 100) < MUTATION_LONGEST_ROUTE_PROBABILITY: # probability of selecting either the furthest traveling vehicle or a random vehicle
+        # find the furthest traveling vehicle
         for v, vehicle in enumerate(solution.vehicles):
-            if vehicle.route_distance > longest_route_length and vehicle.get_num_of_customers_visited() > 2:
-                furthest_travelling_vehicle = v
+            if v not in skip_vehicles and vehicle.route_distance > longest_route_length and vehicle.get_num_of_customers_visited() > 2:
+                furthest_traveling_vehicle = v
                 longest_route_length = vehicle.route_distance
-    if not furthest_travelling_vehicle >= 0:
-        furthest_travelling_vehicle = select_random_vehicle(solution, customers_required=3)
+    if not furthest_traveling_vehicle >= 0:
+        furthest_traveling_vehicle = select_random_vehicle(solution, customers_required=3)
 
-    destination = 1
-    while destination <= solution.vehicles[furthest_travelling_vehicle].get_num_of_customers_visited() - 2:
+    return furthest_traveling_vehicle
+
+def swap_long_distance_destinations(instance: ProblemInstance, solution: FIGASolution, just_once: bool=False) -> FIGASolution:
+    first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
+    second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
+
+    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
+
+    for d in range(1, min(first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()) + 1):
         # if the distance between "destination" and "destination + 1" is greater than "destination" and "destination + 2" then swap "destination + 1" and "destination + 2"
-        if instance.get_distance(solution.vehicles[furthest_travelling_vehicle].destinations[destination].node.number, solution.vehicles[furthest_travelling_vehicle].destinations[destination + 1].node.number) > instance.get_distance(solution.vehicles[furthest_travelling_vehicle].destinations[destination].node.number, solution.vehicles[furthest_travelling_vehicle].destinations[destination + 2].node.number):
-            swap(solution.vehicles[furthest_travelling_vehicle].destinations, destination + 1, destination + 2)
+        if (instance.get_distance(second_vehicle.destinations[d - 1].node.number, first_vehicle.destinations[d].node.number) < instance.get_distance(second_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) and instance.get_distance(first_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number) < instance.get_distance(second_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number)) \
+            or (instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) and instance.get_distance(second_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number)):
+            swap(first_vehicle.destinations, d, d, l2=second_vehicle.destinations)
             if just_once:
                 break
-        destination += 1
 
-    solution.vehicles[furthest_travelling_vehicle].calculate_length_of_route(instance)
-    solution.vehicles[furthest_travelling_vehicle].calculate_destinations_time_windows(instance)
+    first_vehicle.calculate_length_of_route(instance)
+    first_vehicle.calculate_destinations_time_windows(instance)
+    first_vehicle.calculate_vehicle_load()
+    second_vehicle.calculate_length_of_route(instance)
+    second_vehicle.calculate_destinations_time_windows(instance)
+    second_vehicle.calculate_vehicle_load()
     solution.objective_function(instance)
 
     return solution
