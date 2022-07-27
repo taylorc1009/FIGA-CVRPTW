@@ -20,15 +20,15 @@ class Vehicle:
         return len(self.destinations) - 2 # like "get_customers_visited", to do this, we assume that every depot departure and return is ordered correctly
 
     def calculate_destination_time_window(self, instance: ProblemInstance, previous_destination: int, current_destination: int) -> None:
-        previous_node = self.destinations[previous_destination].node.number
-        current_node = self.destinations[current_destination].node.number
-        self.destinations[current_destination].arrival_time = self.destinations[previous_destination].departure_time + instance.get_distance(previous_node, current_node)
-        if self.destinations[current_destination].arrival_time < instance.nodes[current_node].ready_time: # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
-            self.destinations[current_destination].wait_time = instance.nodes[current_node].ready_time - self.destinations[current_destination].arrival_time
-            self.destinations[current_destination].arrival_time = instance.nodes[current_node].ready_time
+        previous_destination = self.destinations[previous_destination]
+        current_destination = self.destinations[current_destination]
+        current_destination.arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, current_destination.node.number)
+        if current_destination.arrival_time < current_destination.node.ready_time: # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
+            current_destination.wait_time = current_destination.node.ready_time - current_destination.arrival_time
+            current_destination.arrival_time = current_destination.node.ready_time
         else:
-            self.destinations[current_destination].wait_time = 0.0
-        self.destinations[current_destination].departure_time = self.destinations[current_destination].arrival_time + instance.nodes[current_node].service_duration
+            current_destination.wait_time = 0.0
+        current_destination.departure_time = current_destination.arrival_time + current_destination.node.service_duration
 
     def calculate_destinations_time_windows(self, instance: ProblemInstance) -> None:
         for i in range(1, len(self.destinations)):

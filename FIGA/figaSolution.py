@@ -22,7 +22,7 @@ class FIGASolution(Solution):
             self.total_distance += vehicle.route_distance
 
             for destination in vehicle.get_customers_visited():
-                if destination.arrival_time > instance.nodes[destination.node.number].due_date or vehicle.current_capacity > instance.capacity_of_vehicles:
+                if destination.arrival_time > destination.node.due_date or vehicle.current_capacity > instance.capacity_of_vehicles:
                     self.feasible = False
                     self.total_distance = INT_MAX
                     self.num_vehicles = INT_MAX
