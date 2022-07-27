@@ -87,9 +87,10 @@ def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_ve
     crossover_solution.objective_function(instance)
     return crossover_solution
 
-def select_random_vehicle(solution: FIGASolution, customers_required: int=2) -> int:
+def select_random_vehicle(solution: FIGASolution, customers_required: int=2, exclude_values: Set[int]=None) -> int:
+    if exclude_values is None:
+        exclude_values = set()
     random_vehicle = -1
-    exclude_values = set()
     while not random_vehicle >= 0:
         random_vehicle = rand(0, len(solution.vehicles) - 1, exclude_values=exclude_values)
         if not solution.vehicles[random_vehicle].get_num_of_customers_visited() >= customers_required:
@@ -175,7 +176,9 @@ def WTBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 def SWTBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Single Wait-Time-based Swap Mutator
     return swap_high_wait_time_destinations(instance, solution, just_once=True)
 
-def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]={}) -> int:
+def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]=None) -> int:
+    if skip_vehicles is None:
+        skip_vehicles = set()
     longest_route_length = 0
     furthest_traveling_vehicle = int() # this function will always assign a value to this variable
 
