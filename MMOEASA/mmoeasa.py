@@ -10,7 +10,7 @@ from problemInstance import ProblemInstance
 from destination import Destination
 from vehicle import Vehicle
 from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
-from typing import Deque, List, Tuple, Union, Dict
+from typing import Callable, Deque, List, Tuple, Union, Dict
 from numpy import sqrt, exp
 
 initialiser_execution_time: int=0
@@ -108,11 +108,19 @@ def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution
                 return mutation10(instance, solution_copy), True
     return I, False
 
-def euclidean_distance_dispersion(instance: ProblemInstance, x1: float, y1: float, x2: float, y2: float) -> float:
-    return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_cargo_unbalance) ** 2)
+def euclidean_distance_dispersion(instance: ProblemInstance, child: Union[MMOEASASolution, OmbukiSolution], parent: Union[MMOEASASolution, OmbukiSolution]) -> float:
+    if instance.acceptance_criterion == "MMOEASA":
+        # use "instance.Hypervolume_distance_unbalance" if you would like to use the distance imbalance as the second objective
+        x1, y1 = child.total_distance, child.cargo_unbalance
+        x2, y2 = parent.total_distance, parent.cargo_unbalance
+        return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_cargo_unbalance) ** 2)
+    elif instance.acceptance_criterion == "OMBUKI":
+        x1, y1 = child.total_distance, child.num_vehicles
+        x2, y2 = parent.total_distance, parent.num_vehicles
+        return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
 
-def mo_metropolis(instance: ProblemInstance, parent: MMOEASASolution, child: MMOEASASolution, temperature: float) -> MMOEASASolution:
-    if is_nondominated(parent, child):
+def mo_metropolis(instance: ProblemInstance, parent: Union[MMOEASASolution, OmbukiSolution], child: Union[MMOEASASolution, OmbukiSolution], temperature: float, nondominated_check: Callable[[Union[OmbukiSolution, MMOEASASolution], Union[OmbukiSolution, MMOEASASolution]], bool]) -> MMOEASASolution:
+    if nondominated_check(parent, child):
         return child
     elif temperature <= 0.00001:
         return parent
@@ -121,7 +129,7 @@ def mo_metropolis(instance: ProblemInstance, parent: MMOEASASolution, child: MMO
         # the Metropolis function accepts a solution based on this deterioration when neither the parent nor child dominate
         # the reason the deterioration needs to be simulated is that it cannot be calculated in a multi objective case; in a single-objective case, the deterioration would simply be "solution one's objective - solution two's objective"
         # if the deterioration is low, there is a better chance that the Metropolis function will accept the child solution
-        d_df = euclidean_distance_dispersion(instance, child.total_distance, child.cargo_unbalance, parent.total_distance, parent.cargo_unbalance)
+        d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
         d_pt_pt = d_df / temperature ** 2
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
@@ -144,9 +152,8 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
     for i in range(population_size):
         population.insert(i, copy.deepcopy(TWIH_solution))
         population[i].id = i
-        if instance.acceptance_criterion == "MMOEASA": # there is a few "if acceptance is MMOEASA" checks in the main algorithm because we don't want Simulated Annealing to be used in Ombuki's acceptance
-            population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
-            population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
+        population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
+        population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
     del TWIH_solution
     initialiser_execution_time = round((process_time() - initialiser_execution_time) * 1000, 3)
 
@@ -155,13 +162,11 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
     iterations = 0
     # the multi-start termination is commented out because it's used to calculate the number of iterations termination during the termination check
     # this is so multi-start doesn't terminate the algorithm when time is the termination condition
-    #current_multi_start = 0
-    while not terminate:#current_multi_start < MS:
-        if instance.acceptance_criterion == "MMOEASA":
-            for s in range(len(population)): # multi-start is used to restart the Simulated Annealing attributes of every solution
-                population[s].temperature = population[s].default_temperature
+    while not terminate:
+        for solution in population: # multi-start is used to restart the Simulated Annealing attributes of every solution
+            solution.temperature = solution.default_temperature
 
-        while (instance.acceptance_criterion == "MMOEASA" and population[0].temperature > temperature_stop and not terminate) or not terminate:
+        while population[0].temperature > temperature_stop and not terminate:
             for s, solution in enumerate(population):
                 selection_tournament = rand(0, 1) if nondominated_set else 0 # determines whether to use the non-dominated set to get the second crossover parent
                 solution_copy = crossover(instance, solution, nondominated_set if selection_tournament else population, crossover_probability, not not selection_tournament)
@@ -172,30 +177,19 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
                     if mutation_occurred:
                         mutations += 1
 
-                if instance.acceptance_criterion == "Ombuki":
-                    child_dominated = ombuki_is_nondominated(solution, solution_copy)
-                    if child_dominated or not population[s].feasible: # overwrite the parent solution either if the child dominated it or the parent is infeasible
-                        population[s] = solution_copy
-                        if child_dominated and check_nondominated_set_acceptance(nondominated_set, solution_copy, ombuki_is_nondominated):
-                            if crossover_occurred:
-                                crossover_successes += 1
-                            if mutations > 0:
-                                mutation_successes += mutations
-                else:
-                    population[s] = mo_metropolis(instance, solution, solution_copy, solution.temperature)
-                    # if the metropolis function chose to overwrite the parent and the child is feasible and the child was added to the non-dominated set
-                    if population[s] is solution_copy and population[s].feasible and check_nondominated_set_acceptance(nondominated_set, solution_copy, is_nondominated):
-                        if crossover_occurred:
-                            crossover_successes += 1
-                        if mutations > 0:
-                            mutation_successes += mutations
+                population[s] = mo_metropolis(instance, solution, solution_copy, solution.temperature, is_nondominated if instance.acceptance_criterion == "MMOEASA" else ombuki_is_nondominated)
+                # if the metropolis function chose to overwrite the parent and the child is feasible and the child was added to the non-dominated set
+                if population[s] is solution_copy and population[s].feasible and check_nondominated_set_acceptance(nondominated_set, solution_copy, is_nondominated if instance.acceptance_criterion == "MMOEASA" else ombuki_is_nondominated):
+                    if crossover_occurred:
+                        crossover_successes += 1
+                    if mutations > 0:
+                        mutation_successes += mutations
 
                 """# uncomment this code if you'd like a solution to be written to a CSV
                 if instance.acceptance_criterion == "MMOEASA" and nondominated_set:
                     MMOEASA_write_solution_for_validation(nondominated_set[0], instance.capacity_of_vehicles)"""
 
-                if instance.acceptance_criterion == "MMOEASA":
-                    population[s].temperature *= population[s].cooling_rate
+                population[s].temperature *= population[s].cooling_rate
             iterations += 1
 
             if termination_type == "iterations":

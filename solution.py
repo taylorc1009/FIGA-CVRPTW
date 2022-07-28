@@ -4,11 +4,16 @@ from problemInstance import ProblemInstance
 from common import INT_MAX
 
 class Solution:
-    def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, rank: int=INT_MAX) -> None:
+    def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, rank: int=INT_MAX, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0) -> None:
         self.id: int=int(_id)
         self.vehicles: List[Vehicle]=vehicles
         self.feasible: bool=feasible
         self.total_distance: float=float(total_distance)
+
+        # Simulated Annealing parameters for MMOEASA: exists in the parent class for when MMOEASA is solving Ombuki's objective function
+        self.default_temperature: float=float(default_temperature)
+        self.temperature: float=float(temperature)
+        self.cooling_rate: float=float(cooling_rate)
 
         # ranking used in Ombuki's Algorithm; exists in the parent class for when Ombuki's Algorithm is solving MMOEASA's objective function
         self.rank: int=int(rank)

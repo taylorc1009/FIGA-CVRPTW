@@ -8,12 +8,9 @@ from solution import Solution
 
 class MMOEASASolution(Solution):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0, total_distance: float=0.0, distance_unbalance: float=0.0, cargo_unbalance: float=0.0, rank: int=INT_MAX) -> None:
-        super(MMOEASASolution, self).__init__(_id=_id, vehicles=vehicles, feasible=feasible, total_distance=total_distance, rank=rank)
+        super(MMOEASASolution, self).__init__(_id=_id, vehicles=vehicles, feasible=feasible, default_temperature=default_temperature, temperature=temperature, cooling_rate=cooling_rate, total_distance=total_distance, rank=rank)
         self.distance_unbalance: float=float(distance_unbalance)
         self.cargo_unbalance: float=float(cargo_unbalance)
-        self.default_temperature: float=float(default_temperature)
-        self.temperature: float=float(temperature)
-        self.cooling_rate: float=float(cooling_rate)
 
     def __str__(self) -> str:
         return f"total_distance={self.total_distance}, distance_unbalance={self.distance_unbalance}, cargo_unbalance={self.cargo_unbalance}, {len(self.vehicles)=}, {[f'{i}. {str(v)}' for i, v in enumerate(self.vehicles)]}"

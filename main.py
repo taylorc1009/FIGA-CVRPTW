@@ -60,7 +60,7 @@ if __name__ == '__main__':
     else:
         if sys.argv[1].upper() == "FIGA":
             if argc == 3:
-                sys.argv.append("Ombuki")
+                sys.argv.append("OMBUKI")
             else:
                 exc = ValueError("FIGA should not be given a pre-determined acceptance criterion; it only has one")
                 raise exc

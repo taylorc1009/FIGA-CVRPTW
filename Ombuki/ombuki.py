@@ -21,7 +21,7 @@ mutation_invocations: int=0
 mutation_successes: int=0
 
 def generate_random_solution(instance: ProblemInstance) -> Union[OmbukiSolution, MMOEASASolution]:
-    solution = OmbukiSolution(_id=0, vehicles=list()) if instance.acceptance_criterion == "Ombuki" else MMOEASASolution(_id=0, vehicles=list())
+    solution = OmbukiSolution(_id=0, vehicles=list()) if instance.acceptance_criterion == "OMBUKI" else MMOEASASolution(_id=0, vehicles=list())
 
     for i in range(1, len(instance.nodes)):
         infeasible_vehicles = set()
@@ -47,7 +47,7 @@ def generate_random_solution(instance: ProblemInstance) -> Union[OmbukiSolution,
     return solution
 
 def generate_greedy_solution(instance: ProblemInstance) -> Union[OmbukiSolution, MMOEASASolution]:
-    solution = OmbukiSolution(_id=0, vehicles=[Vehicle.create_route(instance)]) if instance.acceptance_criterion == "Ombuki" else MMOEASASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
+    solution = OmbukiSolution(_id=0, vehicles=[Vehicle.create_route(instance)]) if instance.acceptance_criterion == "OMBUKI" else MMOEASASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
     unvisited_nodes = list(arange(1, len(instance.nodes)))
     vehicle = 0
 
@@ -110,7 +110,7 @@ def pareto_rank(instance: ProblemInstance, population: List[Union[OmbukiSolution
 def original_feasible_network_transformation(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution]) -> Union[OmbukiSolution, MMOEASASolution]:
     # create a new vehicle with the first destination of the first route as a starting point
     vehicles = [Vehicle.create_route(instance, solution.vehicles[0].destinations[1].node)]
-    transformed_solution = OmbukiSolution(_id=solution.id, vehicles=vehicles) if instance.acceptance_criterion == "Ombuki" else MMOEASASolution(_id=solution.id, vehicles=vehicles)
+    transformed_solution = OmbukiSolution(_id=solution.id, vehicles=vehicles) if instance.acceptance_criterion == "OMBUKI" else MMOEASASolution(_id=solution.id, vehicles=vehicles)
     transformed_solution.vehicles[0].current_capacity += solution.vehicles[0].destinations[1].node.demand
     transformed_solution.vehicles[0].calculate_destination_time_window(instance, 0, 1)
 
@@ -137,7 +137,7 @@ def original_feasible_network_transformation(instance: ProblemInstance, solution
 def modified_feasible_network_transformation(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution]) -> Union[OmbukiSolution, MMOEASASolution]:
     # largely the same as the "original_feasible_network_transformation", except when a new vehicle cannot be created because of the problem instance's limit, the infeasible insertion is appended to the end of the route with the nearest final destination
     vehicles = [Vehicle.create_route(instance, solution.vehicles[0].destinations[1].node)]
-    transformed_solution = OmbukiSolution(_id=solution.id, vehicles=vehicles) if instance.acceptance_criterion == "Ombuki" else MMOEASASolution(_id=solution.id, vehicles=vehicles)
+    transformed_solution = OmbukiSolution(_id=solution.id, vehicles=vehicles) if instance.acceptance_criterion == "OMBUKI" else MMOEASASolution(_id=solution.id, vehicles=vehicles)
     transformed_solution.vehicles[0].current_capacity += solution.vehicles[0].destinations[1].node.demand
     transformed_solution.vehicles[0].calculate_destination_time_window(instance, 0, 1)
 
