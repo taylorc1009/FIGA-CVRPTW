@@ -8,7 +8,7 @@ from node import Node
 from problemInstance import ProblemInstance
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 
-def open_problem_instance(filename: str, acceptance_criterion: str) -> ProblemInstance:
+def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: str) -> ProblemInstance:
     try:
         with open(filename, 'r') as file:
             problem_instance = None
@@ -24,7 +24,7 @@ def open_problem_instance(filename: str, acceptance_criterion: str) -> ProblemIn
                         else: # if the current line doesn't contain only two values, it will, instead, always contain seven and lines with seven values represent destinations
                             node = Node(*cur_line)
                             problem_instance.nodes[int(node.number)] = node
-            if len(problem_instance.nodes) - 1 == 100:
+            if len(problem_instance.nodes) - 1 == 100 and algorithm == "MMOEASA":
                 with open("solomon_100/hypervolumes.json") as json_file:
                     problem_instance.update_Hypervolumes(acceptance_criterion, *json.load(json_file)[acceptance_criterion][problem_instance.name])
 

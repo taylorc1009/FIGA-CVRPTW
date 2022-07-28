@@ -68,7 +68,7 @@ if __name__ == '__main__':
         if len(sys.argv) != 4 or sys.argv[3].upper() not in {"MMOEASA", "OMBUKI"}:
             exc = ValueError(f"Acceptance criterion \"{'' if len(sys.argv) != 4 else sys.argv[3]}\" was not recognised")
             raise exc
-        problem_instance = open_problem_instance(sys.argv[2], sys.argv[3].upper())
+        problem_instance = open_problem_instance(sys.argv[1].upper(), sys.argv[2], sys.argv[3].upper())
 
         nondominated_set, statistics = None, None
         if sys.argv[1].upper() == "MMOEASA":
