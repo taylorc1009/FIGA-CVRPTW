@@ -88,7 +88,7 @@ def crossover_evaluation(instance: ProblemInstance, crossover_solution: FIGASolu
 
     return crossover_solution_final
 
-def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution) -> FIGASolution:
+def crossover_tree(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution) -> FIGASolution:
     crossover_solution, nodes_to_insert, parent_two_destinations = initialise_decision_tree_prerequisites(instance, parent_one, parent_two)
 
     stats_record = {destination.node.number: CrossoverPositionStats() for destination in parent_two_destinations}
@@ -143,7 +143,7 @@ def crossover_evaluation_multithreaded(instance: ProblemInstance, crossover_solu
     for t in thread_pool:
         t.join()
 
-def crossover_multithreaded(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution) -> FIGASolution:
+def crossover_tree_multithreaded(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution) -> FIGASolution:
     crossover_solution, nodes_to_insert, parent_two_destinations = initialise_decision_tree_prerequisites(instance, parent_one, parent_two)
 
     stats_record = {destination.node.number: CrossoverPositionStats() for destination in parent_two_destinations}
@@ -192,7 +192,7 @@ def set_up_crossover_child(instance: ProblemInstance, primary_parent: FIGASoluti
             i += 1
 
     child_solution.calculate_routes_time_windows(instance)
-    child_solution.calculate_vehicles_loads()
+    #child_solution.calculate_length_of_routes(instance) # this is not required here as the crossovers don't do any work with the total length of each route
 
     return child_solution
 
@@ -205,7 +205,7 @@ def crossover_thread(instance: ProblemInstance, primary_parent: FIGASolution, se
         parent_destination = secondary_parent_vehicle.destinations[d]
         best_vehicle, best_position = instance.amount_of_vehicles, 1
         shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
-        highest_wait_time = 0.0
+        highest_wait_time, lowest_ready_time_difference = 0.0, float(INT_MAX)
         found_feasible_location = False
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
@@ -226,11 +226,11 @@ def crossover_thread(instance: ProblemInstance, primary_parent: FIGASolution, se
                             and ((distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next)):
                         best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
                         found_feasible_location = True
-                    elif not found_feasible_location and crossover_solution.vehicles[i].destinations[j - 1].wait_time > highest_wait_time:
+                    elif not found_feasible_location and crossover_solution.vehicles[i].destinations[j - 1].wait_time > highest_wait_time and abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous) < lowest_ready_time_difference:
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
-                        best_vehicle, best_position, highest_wait_time = i, j - 1, crossover_solution.vehicles[i].destinations[j - 1].wait_time
+                        best_vehicle, best_position, highest_wait_time, lowest_ready_time_difference = i, j - 1, crossover_solution.vehicles[i].destinations[j - 1].wait_time, abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous)
 
-        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles:
+        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and not best_vehicle < instance.amount_of_vehicles:
             best_vehicle = len(crossover_solution.vehicles)
             crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination))
         else:
