@@ -177,21 +177,23 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
 
     first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
 
+    # for d in range(1, min(first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()) + 1):
+    #     #if the distance between "destination" and "destination + 1" is greater than "destination" and "destination + 2" then swap "destination + 1" and "destination + 2"
+    #     if (instance.get_distance(second_vehicle.destinations[d - 1].node.number, first_vehicle.destinations[d].node.number) < instance.get_distance(second_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) and instance.get_distance(first_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number) < instance.get_distance(second_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number)) \
+    #         or (instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) and instance.get_distance(second_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number)):
+    #         swap(first_vehicle.destinations, d, d, l2=second_vehicle.destinations)
+    #         break
+    
     for d in range(1, min(first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()) + 1):
-        # if the distance between "destination" and "destination + 1" is greater than "destination" and "destination + 2" then swap "destination + 1" and "destination + 2"
-        # if (instance.get_distance(second_vehicle.destinations[d - 1].node.number, first_vehicle.destinations[d].node.number) < instance.get_distance(second_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) and instance.get_distance(first_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number) < instance.get_distance(second_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number)) \
-        #     or (instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) and instance.get_distance(second_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number)):
         distance_from_previous = instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number)
-        distance_to_next = instance.get_distance(second_vehicle.destinations[d].node.number, first_vehicle.destinations[d].node.number)
         
         simulated_arrival_time = first_vehicle.destinations[d - 1].departure_time + distance_from_previous
         if simulated_arrival_time < second_vehicle.destinations[d].node.ready_time:
-            simulated_arrival_time = first_vehicle.destinations[d].node.ready_time
+            simulated_arrival_time = second_vehicle.destinations[d].node.ready_time
         simulated_departure_time = simulated_arrival_time + second_vehicle.destinations[d].node.service_duration
         
         if instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) < instance.get_distance(first_vehicle.destinations[d - 1].node.number, first_vehicle.destinations[d].node.number) \
             and simulated_departure_time + instance.get_distance(second_vehicle.destinations[d].node.number, first_vehicle.destinations[d].node.number) < first_vehicle.destinations[d].node.due_date:
-            #swap(first_vehicle.destinations, d, d, l2=second_vehicle.destinations)
             first_vehicle.destinations.insert(d, second_vehicle.destinations.pop(d))
             if not second_vehicle.get_num_of_customers_visited():
                 del solution.vehicles[second_furthest_traveling_vehicle]
