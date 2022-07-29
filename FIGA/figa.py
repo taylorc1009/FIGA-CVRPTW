@@ -6,7 +6,7 @@ from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import ATBR_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, TWBSw_mutation, WTBS_mutation, SWTBS_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover
+from FIGA.operators import ATBR_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, TWBSw_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover
 from FIGA.parameters import TOURNAMENT_PROBABILITY_SELECT_BEST
 from vehicle import Vehicle
 from numpy import ceil, random
@@ -222,7 +222,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(1, 7)
+        probability = rand(1, 8)
 
         match probability:
             case 1:
@@ -239,10 +239,6 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
                 mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
         """case 7:
             mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator"""
-        """case 3:
-            mutated_solution = WTBS_mutation(instance, mutated_solution) # Wait-Time-based Swap Mutator
-        case 4:
-            mutated_solution = SWTBS_mutation(instance, mutated_solution) # Single Wait-Time-based Swap Mutator"""
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:

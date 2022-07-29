@@ -154,37 +154,6 @@ def TWBSw_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASol
 
     return solution
 
-def swap_high_wait_time_destinations(instance: ProblemInstance, solution: FIGASolution, just_once: bool=False) -> FIGASolution:
-    longest_waiting_vehicle = select_route_with_longest_wait(solution)
-
-    destination = 1
-    while destination < solution.vehicles[longest_waiting_vehicle].get_num_of_customers_visited():
-        if solution.vehicles[longest_waiting_vehicle].destinations[destination].wait_time > solution.vehicles[longest_waiting_vehicle].destinations[destination + 1].wait_time:
-            swap(solution.vehicles[longest_waiting_vehicle].destinations, destination, destination + 1)
-
-            for _ in range(2): # fix the arrival and departure times for the nodes that were swapped
-                solution.vehicles[longest_waiting_vehicle].calculate_destination_time_window(instance, destination - 1, destination)
-                destination += 1
-            if just_once:
-                for d in range(destination, solution.vehicles[longest_waiting_vehicle].get_num_of_customers_visited() + 1): # fix the arrival and departure times of destinations that follow the swapped nodes
-                    solution.vehicles[longest_waiting_vehicle].calculate_destination_time_window(instance, d - 1, d)
-                break
-            elif not destination > solution.vehicles[longest_waiting_vehicle].get_num_of_customers_visited(): # fix the arrival and departure time for only the destination after the node moved back one position
-                solution.vehicles[longest_waiting_vehicle].calculate_destination_time_window(instance, destination, destination + 1)
-        else:
-            destination += 1
-
-    solution.vehicles[longest_waiting_vehicle].calculate_length_of_route(instance)
-    solution.objective_function(instance)
-
-    return solution
-
-def WTBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Wait-Time-based Swap Mutator
-    return swap_high_wait_time_destinations(instance, solution)
-
-def SWTBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Single Wait-Time-based Swap Mutator
-    return swap_high_wait_time_destinations(instance, solution, just_once=True)
-
 def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]=None) -> int:
     if skip_vehicles is None:
         skip_vehicles = set()
