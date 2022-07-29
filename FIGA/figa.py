@@ -57,7 +57,7 @@ def DTWIH_II(instance: ProblemInstance) -> FIGASolution:
     solution = FIGASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
 
     while sorted_nodes:
-        shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
+        shuffle_buffer_size = min(range_of_sorted_nodes, len(sorted_nodes)) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
         shuffled_nodes_buffer = sorted_nodes[:shuffle_buffer_size] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
         shuffle(shuffled_nodes_buffer)
         for i in range(shuffle_buffer_size):
