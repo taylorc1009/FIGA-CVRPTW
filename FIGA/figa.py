@@ -95,7 +95,7 @@ def DTWIH_II(instance: ProblemInstance) -> FIGASolution:
 
 def DTWIH_III(instance: ProblemInstance) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
-    range_of_sorted_nodes = int(ceil(instance.amount_of_vehicles / 2))
+    range_of_sorted_nodes = int(ceil(len(instance.nodes) / 10))
     solution = FIGASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
 
     while sorted_nodes:
