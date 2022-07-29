@@ -34,11 +34,11 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, 
             i += 1
 
     child_solution.calculate_routes_time_windows(instance)
-    child_solution.calculate_vehicles_loads()
+    #child_solution.calculate_length_of_routes(instance) # this is not required here as the crossovers don't do any work with the total length of each route
 
     return child_solution
 
-def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicle: Vehicle) -> FIGASolution:
+def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicle: Vehicle) -> FIGASolution: # Single-child Best Cost Route Crossover
     crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicle)
 
     randomized_destinations = list(range(1, len(parent_two_vehicle.destinations) - 1))
@@ -47,7 +47,7 @@ def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_ve
         parent_destination = parent_two_vehicle.destinations[d]
         best_vehicle, best_position = instance.amount_of_vehicles, 1
         shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
-        highest_wait_time = 0.0
+        highest_wait_time, lowest_ready_time_difference = 0.0, float(INT_MAX)
         found_feasible_location = False
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
@@ -68,11 +68,11 @@ def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_ve
                             and ((distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next)):
                         best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
                         found_feasible_location = True
-                    elif not found_feasible_location and crossover_solution.vehicles[i].destinations[j - 1].wait_time > highest_wait_time:
+                    elif not found_feasible_location and crossover_solution.vehicles[i].destinations[j - 1].wait_time > highest_wait_time and abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous) < lowest_ready_time_difference:
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
-                        best_vehicle, best_position, highest_wait_time = i, j - 1, crossover_solution.vehicles[i].destinations[j - 1].wait_time
+                        best_vehicle, best_position, highest_wait_time, lowest_ready_time_difference = i, j - 1, crossover_solution.vehicles[i].destinations[j - 1].wait_time, abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous)
 
-        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles:
+        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and not best_vehicle < instance.amount_of_vehicles:
             best_vehicle = len(crossover_solution.vehicles)
             crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination))
         else:
@@ -84,6 +84,15 @@ def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_ve
         crossover_solution.vehicles[best_vehicle].calculate_destinations_time_windows(instance)
         crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)
 
+    crossover_solution.objective_function(instance)
+    return crossover_solution
+
+def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicle: FIGASolution) -> FIGASolution: # Eliminate and Substitute Crossover
+    crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicle)
+
+    crossover_solution.vehicles.append(parent_two_vehicle)
+
+    crossover_solution.calculate_length_of_routes(instance)
     crossover_solution.objective_function(instance)
     return crossover_solution
 
@@ -193,7 +202,7 @@ def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]=No
 
     return furthest_traveling_vehicle
 
-def swap_long_distance_destinations(instance: ProblemInstance, solution: FIGASolution, just_once: bool=False) -> FIGASolution:
+def DBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Swap Mutator
     first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
     second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
 
@@ -204,8 +213,7 @@ def swap_long_distance_destinations(instance: ProblemInstance, solution: FIGASol
         if (instance.get_distance(second_vehicle.destinations[d - 1].node.number, first_vehicle.destinations[d].node.number) < instance.get_distance(second_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) and instance.get_distance(first_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number) < instance.get_distance(second_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number)) \
             or (instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) and instance.get_distance(second_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number)):
             swap(first_vehicle.destinations, d, d, l2=second_vehicle.destinations)
-            if just_once:
-                break
+            break
 
     first_vehicle.calculate_length_of_route(instance)
     first_vehicle.calculate_destinations_time_windows(instance)
@@ -216,12 +224,6 @@ def swap_long_distance_destinations(instance: ProblemInstance, solution: FIGASol
     solution.objective_function(instance)
 
     return solution
-
-def DBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Swap Mutator
-    return swap_long_distance_destinations(instance, solution)
-
-def SDBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Single Distance-based Swap Mutator
-    return swap_long_distance_destinations(instance, solution, just_once=True)
 
 def move_destination_to_fit_window(instance: ProblemInstance, solution: FIGASolution, reverse: bool=False) -> FIGASolution:
     random_vehicle = select_random_vehicle(solution)

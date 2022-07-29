@@ -6,7 +6,7 @@ from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import ATBR_mutation, TWBLC_mutation, crossover, TWBS_mutation, TWBSw_mutation, WTBS_mutation, SWTBS_mutation, DBS_mutation, SDBS_mutation, TWBMF_mutation, TWBPB_mutation
+from FIGA.operators import ATBR_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, TWBSw_mutation, WTBS_mutation, SWTBS_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover
 from FIGA.parameters import TOURNAMENT_PROBABILITY_SELECT_BEST
 from vehicle import Vehicle
 from numpy import ceil, random
@@ -15,7 +15,7 @@ from numpy import ceil, random
 initialiser_execution_time: int=0
 feasible_initialisations: int=0
 crossover_invocations: int=0
-crossover_successes: int=0
+crossover_successes: Dict[int, int]={}
 mutation_invocations: int=0
 mutation_successes: Dict[int, int]={}
 
@@ -196,10 +196,23 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         global crossover_invocations, crossover_successes
         crossover_invocations += 1
 
-        crossover_solution = crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
+        crossover_solution = None
+        parent_two_vehicle = parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)]
+        probability = rand(1, 3)
+
+        match probability:
+            case 1:
+                crossover_solution = SBCR_crossover(instance, parent_one, parent_two_vehicle)
+            case 2 | 3:
+                crossover_solution = ES_crossover(instance, parent_one, parent_two_vehicle)
 
         if is_nondominated(parent_one, crossover_solution):
-            crossover_successes += 1
+            if probability == 3:
+                probability = 2
+            if not probability in crossover_successes:
+                crossover_successes[probability] = 1
+            else:
+                crossover_successes[probability] += 1
         return crossover_solution
     return parent_one
 
@@ -209,7 +222,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(1, 6)
+        probability = rand(1, 7)
 
         match probability:
             case 1:
@@ -224,14 +237,12 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
                 mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
             case 6:
                 mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
+        """case 7:
+            mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator"""
         """case 3:
             mutated_solution = WTBS_mutation(instance, mutated_solution) # Wait-Time-based Swap Mutator
         case 4:
-            mutated_solution = SWTBS_mutation(instance, mutated_solution) # Single Wait-Time-based Swap Mutator
-        case 5:
-            mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
-        case 6:
-            mutated_solution = SDBS_mutation(instance, mutated_solution) # Single Distance-based Swap Mutator"""
+            mutated_solution = SWTBS_mutation(instance, mutated_solution) # Single Wait-Time-based Swap Mutator"""
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:
@@ -282,7 +293,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         "initialiser_execution_time": f"{initialiser_execution_time} milliseconds",
         "feasible_initialisations": feasible_initialisations,
         "crossover_invocations": crossover_invocations,
-        "crossover_successes": crossover_successes,
+        "crossover_successes": dict(sorted(crossover_successes.items())),
+        "total_successful_crossovers": sum(crossover_successes.values()),
         "mutation_invocations": mutation_invocations,
         "mutation_successes": dict(sorted(mutation_successes.items())),
         "total_successful_mutations": sum(mutation_successes.values())
