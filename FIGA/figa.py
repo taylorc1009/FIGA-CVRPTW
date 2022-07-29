@@ -166,7 +166,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                     i = 20 # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
                 del nondominated_set[i:]
 
-def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
+"""def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
     i = 0
 
     while i < len(solution.vehicles) and len(solution.vehicles) < instance.amount_of_vehicles:
@@ -186,7 +186,7 @@ def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGAS
                 break
         i += 1
 
-    solution.objective_function(instance)
+    solution.objective_function(instance)"""
 
 def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution]) -> FIGASolution:
     return random.choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
@@ -271,8 +271,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     while not terminate:
         crossover_parent_two = selection_tournament(nondominated_set, population)
         for s, solution in enumerate(population):
-            if not solution.feasible:
-                attempt_time_window_based_reorder(instance, solution)
+            # if not solution.feasible:
+            #     attempt_time_window_based_reorder(instance, solution)
 
             child = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
             child = try_mutation(instance, child, mutation_probability)
