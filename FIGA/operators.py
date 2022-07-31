@@ -177,13 +177,6 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
 
     first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
 
-    # for d in range(1, min(first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()) + 1):
-    #     #if the distance between "destination" and "destination + 1" is greater than "destination" and "destination + 2" then swap "destination + 1" and "destination + 2"
-    #     if (instance.get_distance(second_vehicle.destinations[d - 1].node.number, first_vehicle.destinations[d].node.number) < instance.get_distance(second_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) and instance.get_distance(first_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number) < instance.get_distance(second_vehicle.destinations[d].node.number, second_vehicle.destinations[d + 1].node.number)) \
-    #         or (instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) and instance.get_distance(second_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number) < instance.get_distance(first_vehicle.destinations[d].node.number, first_vehicle.destinations[d + 1].node.number)):
-    #         swap(first_vehicle.destinations, d, d, l2=second_vehicle.destinations)
-    #         break
-    
     for d in range(1, min(first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()) + 1):
         distance_from_previous = instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number)
         
@@ -197,15 +190,15 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
             first_vehicle.destinations.insert(d, second_vehicle.destinations.pop(d))
             if not second_vehicle.get_num_of_customers_visited():
                 del solution.vehicles[second_furthest_traveling_vehicle]
+            
+            first_vehicle.calculate_length_of_route(instance)
+            first_vehicle.calculate_destinations_time_windows(instance)
+            first_vehicle.calculate_vehicle_load()
+            second_vehicle.calculate_length_of_route(instance)
+            second_vehicle.calculate_destinations_time_windows(instance)
+            second_vehicle.calculate_vehicle_load()
+            solution.objective_function(instance)
             break
-
-    first_vehicle.calculate_length_of_route(instance)
-    first_vehicle.calculate_destinations_time_windows(instance)
-    first_vehicle.calculate_vehicle_load()
-    second_vehicle.calculate_length_of_route(instance)
-    second_vehicle.calculate_destinations_time_windows(instance)
-    second_vehicle.calculate_vehicle_load()
-    solution.objective_function(instance)
 
     return solution
 
@@ -298,4 +291,42 @@ def ATBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
     solution.calculate_routes_time_windows(instance)
     solution.objective_function(instance)
 
+    return solution
+
+def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Feasibility-based Swap Mutator
+    first_vehicle_index = select_random_vehicle(solution, customers_required=1)
+    first_vehicle = solution.vehicles[first_vehicle_index]
+    second_vehicle = solution.vehicles[select_random_vehicle(solution, customers_required=1, exclude_values=set({first_vehicle_index}))]
+
+    for d1, destination_one in enumerate(first_vehicle.get_customers_visited(), 1):
+        for d2, destination_two in enumerate(second_vehicle.get_customers_visited(), 1):
+            distance_from_first_previous = instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, destination_two.node.number)
+            distance_from_second_previous = instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, destination_one.node.number)
+
+            first_simulated_arrival_time = first_vehicle.destinations[d1 - 1].departure_time + distance_from_first_previous
+            if first_simulated_arrival_time > destination_two.node.due_date:
+                continue
+            if first_simulated_arrival_time < destination_two.node.ready_time:
+                first_simulated_arrival_time = destination_two.node.ready_time
+            first_simulated_departure_time = first_simulated_arrival_time + destination_two.node.service_duration
+            
+            second_simulated_arrival_time = second_vehicle.destinations[d2 - 1].departure_time + distance_from_second_previous
+            if second_simulated_arrival_time > destination_one.node.due_date:
+                continue
+            if second_simulated_arrival_time < destination_one.node.ready_time:
+                second_simulated_arrival_time = destination_one.node.ready_time
+            second_simulated_departure_time = second_simulated_arrival_time + destination_one.node.service_duration
+
+            if first_simulated_departure_time + instance.get_distance(destination_two.node.number, first_vehicle.destinations[d1 + 1].node.number) < first_vehicle.destinations[d1 + 1].node.due_date \
+                and second_simulated_departure_time + instance.get_distance(destination_one.node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date:
+                swap(first_vehicle.destinations, d1, d2, l2=second_vehicle.destinations)
+                first_vehicle.calculate_length_of_route(instance)
+                first_vehicle.calculate_destinations_time_windows(instance)
+                first_vehicle.calculate_vehicle_load()
+                second_vehicle.calculate_length_of_route(instance)
+                second_vehicle.calculate_destinations_time_windows(instance)
+                second_vehicle.calculate_vehicle_load()
+                solution.objective_function(instance)
+
+                return solution
     return solution
