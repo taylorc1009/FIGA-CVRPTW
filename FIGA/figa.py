@@ -198,23 +198,16 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     iterations = 0
     while not terminate:
         crossover_parent_two = selection_tournament(nondominated_set, population)
-        crossover_parent_two_backup = None
         for s, solution in enumerate(population):
             # if not solution.feasible:
             #     attempt_time_window_based_reorder(instance, solution)
 
-            if solution.id == crossover_parent_two.id:
-                crossover_parent_two_backup = crossover_parent_two
-                crossover_parent_two = selection_tournament(nondominated_set, population, solution.id)
-
-            child = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
+            child = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, solution.id), crossover_probability)
             child = try_mutation(instance, child, mutation_probability)
 
             if not solution.feasible or is_nondominated(solution, child):
                 population[s] = child
                 check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
-            if solution.id == crossover_parent_two.id:
-                crossover_parent_two = crossover_parent_two_backup
         iterations += 1
 
         if termination_type == "iterations":
