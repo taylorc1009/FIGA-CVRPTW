@@ -293,11 +293,7 @@ def ATBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 
     return solution
 
-def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Feasibility-based Swap Mutator
-    first_vehicle_index = select_random_vehicle(solution, customers_required=1)
-    first_vehicle = solution.vehicles[first_vehicle_index]
-    second_vehicle = solution.vehicles[select_random_vehicle(solution, customers_required=1, exclude_values=set({first_vehicle_index}))]
-
+def try_feasible_swap(instance: ProblemInstance, solution: FIGASolution, first_vehicle: Vehicle, second_vehicle: Vehicle) -> None:
     for d1, destination_one in enumerate(first_vehicle.get_customers_visited(), 1):
         for d2, destination_two in enumerate(second_vehicle.get_customers_visited(), 1):
             distance_from_first_previous = instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, destination_two.node.number)
@@ -328,5 +324,13 @@ def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
                 second_vehicle.calculate_vehicle_load()
                 solution.objective_function(instance)
 
-                return solution
+                return
+
+def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Feasibility-based Swap Mutator
+    first_vehicle_index = select_random_vehicle(solution, customers_required=1)
+    first_vehicle = solution.vehicles[first_vehicle_index]
+    second_vehicle = solution.vehicles[select_random_vehicle(solution, customers_required=1, exclude_values=set({first_vehicle_index}))]
+
+    try_feasible_swap(instance, solution, first_vehicle, second_vehicle)
+
     return solution

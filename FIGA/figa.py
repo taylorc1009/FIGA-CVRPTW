@@ -152,25 +152,25 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(2, 8)
+        probability = rand(1, 7)
 
         match probability:
             case 1:
-                mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Sort Mutator
-            case 2:
                 mutated_solution = TWBSw_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
-            case 3:
+            case 2:
                 mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
-            case 4:
+            case 3:
                 mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
-            case 5:
+            case 4:
                 mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
-            case 6:
+            case 5:
                 mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
+            case 6:
+                mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
             case 7:
                 mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
-            case 8:
-                mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
+        """case 1:
+            mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Sort Mutator"""
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:
