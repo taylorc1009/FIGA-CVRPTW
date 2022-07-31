@@ -1,6 +1,6 @@
 import copy
 from time import process_time
-from typing import Deque, List, Dict, Tuple
+from typing import Deque, List, Dict, Set, Tuple
 from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle
 from destination import Destination
@@ -114,7 +114,11 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
 
     solution.objective_function(instance)"""
 
-def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution]) -> FIGASolution:
+def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: int=None) -> FIGASolution:
+    if exclude_solution:
+        # if the non-dominated set isn't empty, and contains at least two solutions or one solution that is not "exclude_solution", then it is possible to use the non-dominated set
+        subject_list = nondominated_set if nondominated_set and (len(nondominated_set) > 2 or (len(nondominated_set) == 1 and not nondominated_set[0].id == exclude_solution)) and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population
+        return random.choice(list(filter(lambda s: s.id != exclude_solution, subject_list)))
     return random.choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
 
 def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability) -> FIGASolution:
@@ -194,9 +198,14 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     iterations = 0
     while not terminate:
         crossover_parent_two = selection_tournament(nondominated_set, population)
+        crossover_parent_two_backup = None
         for s, solution in enumerate(population):
             # if not solution.feasible:
             #     attempt_time_window_based_reorder(instance, solution)
+
+            if solution.id == crossover_parent_two.id:
+                crossover_parent_two_backup = crossover_parent_two
+                crossover_parent_two = selection_tournament(nondominated_set, population, solution.id)
 
             child = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
             child = try_mutation(instance, child, mutation_probability)
@@ -204,6 +213,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             if not solution.feasible or is_nondominated(solution, child):
                 population[s] = child
                 check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
+            if solution.id == crossover_parent_two.id:
+                crossover_parent_two = crossover_parent_two_backup
         iterations += 1
 
         if termination_type == "iterations":
