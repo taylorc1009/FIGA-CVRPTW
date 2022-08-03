@@ -7,10 +7,10 @@ from common import INT_MAX, rand
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
 
-def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicle: Vehicle) -> FIGASolution:
+def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution:
     child_solution = copy.deepcopy(parent_one)
 
-    nodes_to_remove = {d.node.number for d in parent_two_vehicle.get_customers_visited()} # create a set containing the numbers of every node in parent_two_vehicle to be merged into parent_one's routes
+    nodes_to_remove = set({d.node.number for vehicle in parent_two_vehicles for d in vehicle.get_customers_visited()}) # create a set containing the numbers of every node in parent_two_vehicle to be merged into parent_one's routes
     i = 0
     while i < len(child_solution.vehicles) and nodes_to_remove:
         increment = True
@@ -39,7 +39,7 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, 
     return child_solution
 
 def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicle: Vehicle) -> FIGASolution: # Single-child Best Cost Route Crossover
-    crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicle)
+    crossover_solution = set_up_crossover_child(instance, parent_one, [parent_two_vehicle])
 
     randomized_destinations = list(range(1, len(parent_two_vehicle.destinations) - 1))
     shuffle(randomized_destinations)
@@ -89,10 +89,10 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
     crossover_solution.objective_function(instance)
     return crossover_solution
 
-def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicle: FIGASolution) -> FIGASolution: # Eliminate and Substitute Crossover
-    crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicle)
+def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Eliminate and Substitute Crossover
+    crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
 
-    crossover_solution.vehicles.append(parent_two_vehicle)
+    crossover_solution.vehicles += parent_two_vehicles
 
     crossover_solution.calculate_length_of_routes(instance)
     crossover_solution.objective_function(instance)

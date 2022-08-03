@@ -7,7 +7,7 @@ from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
 from FIGA.operators import ATBR_mutation, FBS_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover
-from FIGA.parameters import TOURNAMENT_PROBABILITY_SELECT_BEST
+from FIGA.parameters import CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST
 from vehicle import Vehicle
 from numpy import ceil, random
 
@@ -127,14 +127,16 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        parent_two_vehicle = parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)]
         probability = rand(1, 3)
 
         match probability:
             case 1:
-                crossover_solution = SBCR_crossover(instance, parent_one, parent_two_vehicle)
-            case 2 | 3:
-                crossover_solution = ES_crossover(instance, parent_one, parent_two_vehicle)
+                crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
+            case 2 | 3: # crossover two has a 2/3 chance of occurring
+                vehicles_to_crossover = []
+                for _ in range(rand(1, CROSSOVER_MAX_VEHICLES)):
+                    vehicles_to_crossover.append(rand(0, len(parent_two.vehicles) - 1, exclude_values=set(vehicles_to_crossover)))
+                crossover_solution = ES_crossover(instance, parent_one, [parent_two.vehicles[r] for r in vehicles_to_crossover])
 
         if is_nondominated(parent_one, crossover_solution):
             if probability == 3:
