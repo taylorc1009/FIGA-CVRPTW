@@ -35,8 +35,8 @@ class Solution:
         # error checks to ensure that every route is of the valid format
         if sum(v.get_num_of_customers_visited() for v in self.vehicles) != len(instance.nodes) - 1: # check if the solution contains the correct amount of destinations, in that it visits all of them
             raise ValueError(f"Mismatched amount of destinations: {sum(v.get_num_of_customers_visited() for v in self.vehicles)}")
-        elif [v for v in self.vehicles if len(v.destinations) < 2]: # checks if all the routes has at least 2 destinations; routes should always at least depart from and return to the depot
-            raise ValueError("Number of destinations was not at least 2")
+        elif [v for v in self.vehicles if len(v.destinations) < 3]: # checks if all the routes have at least 3 destinations; routes should always at least depart from and return to the depot, while visiting a customer inbetween
+            raise ValueError("Number of destinations was not at least 3")
         elif [v for v in self.vehicles if v.destinations[0].node.number or v.destinations[-1].node.number]: # checks that every route starts and ends at the depot
             raise ValueError("Indexes 0 and n - 1 should be depot nodes")
         elif node_nums.difference(set(d.node.number for v in self.vehicles for d in v.get_customers_visited())): # checks if all nodes have been visited; ".remove" will also find both: duplicate nodes as it will throw an exception when it tries to remove an already-removed node, and depot nodes in the middle of a route as the set starts at 1, so if it tries to remove the depot (node 0) it won't exist and throw an exception

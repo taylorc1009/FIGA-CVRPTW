@@ -76,7 +76,7 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
 
         if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles:# and not best_vehicle < instance.amount_of_vehicles:
             best_vehicle = len(crossover_solution.vehicles)
-            crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination))
+            crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
         else:
             # best_vehicle and best_position will equal the insertion position before the vehicle with the longest wait time
             # that is if no feasible insertion point was found, otherwise it will equal the fittest feasible insertion point
@@ -235,7 +235,7 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
     return solution
 
 def move_destination_to_fit_window(instance: ProblemInstance, solution: FIGASolution, reverse: bool=False) -> FIGASolution:
-    random_vehicle = select_random_vehicle(solution)
+    random_vehicle = select_random_vehicle(solution, customers_required=2)
 
     original_indexes = {destination.node.number: index for index, destination in enumerate(solution.vehicles[random_vehicle].get_customers_visited(), 1)} # will be used to get the current index of a destination to be moved forward or pushed back
     sorted_destinations = list(enumerate(sorted(solution.vehicles[random_vehicle].get_customers_visited(), key=lambda d: d.node.ready_time), 1)) # sort the destinations in a route by their ready_time

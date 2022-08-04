@@ -6,7 +6,7 @@ from MMOEASA.mmoeasaSolution import MMOEASASolution
 from Ombuki.ombukiSolution import OmbukiSolution
 from FIGA.figaSolution import FIGASolution
 from problemInstance import ProblemInstance
-from data import open_problem_instance
+from data import open_problem_instance, write_solution_for_graph
 from MMOEASA.mmoeasa import MMOEASA
 from Ombuki.ombuki import Ombuki
 from evaluation import calculate_area
@@ -21,8 +21,8 @@ def execute_Ombuki(problem_instance: ProblemInstance, use_original: bool) -> Tup
     return Ombuki(problem_instance, POPULATION_SIZE, TERMINATION_CONDITION_SECONDS if TERMINATION_CONDITION_TYPE == "seconds" else TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_TYPE, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, use_original, deque([(TERMINATION_CONDITION_SECONDS / 10) * step if TERMINATION_CONDITION_TYPE == "seconds" else (TERMINATION_CONDITION_ITERATIONS / 10) * step for step in range(NUM_PROGRESS_OUTPUTS)]))
 
 def execute_FIGA(problem_instance: ProblemInstance) -> Tuple[List[FIGASolution], Dict[str, int]]:
-    from FIGA.parameters import POPULATION_SIZE, TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_SECONDS, TERMINATION_CONDITION_TYPE, NUM_PROGRESS_OUTPUTS, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY
-    return FIGA(problem_instance, POPULATION_SIZE, TERMINATION_CONDITION_SECONDS if TERMINATION_CONDITION_TYPE == "seconds" else TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_TYPE, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, deque([(TERMINATION_CONDITION_SECONDS / 10) * step if TERMINATION_CONDITION_TYPE == "seconds" else (TERMINATION_CONDITION_ITERATIONS / 10) * step for step in range(NUM_PROGRESS_OUTPUTS)]))
+    from FIGA.parameters import POPULATION_SIZE, TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_SECONDS, TERMINATION_CONDITION_TYPE, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP, NUM_PROGRESS_OUTPUTS, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY
+    return FIGA(problem_instance, POPULATION_SIZE, TERMINATION_CONDITION_SECONDS if TERMINATION_CONDITION_TYPE == "seconds" else TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_TYPE, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP, deque([(TERMINATION_CONDITION_SECONDS / 10) * step if TERMINATION_CONDITION_TYPE == "seconds" else (TERMINATION_CONDITION_ITERATIONS / 10) * step for step in range(NUM_PROGRESS_OUTPUTS)]))
 
 if __name__ == '__main__':
     argc = len(sys.argv)
@@ -83,10 +83,10 @@ if __name__ == '__main__':
             exc = ValueError(f"Algorithm \"{sys.argv[1]}\" was not recognised")
             raise exc
 
-        """# uncomment this code if you'd like a solution to be written to a CSV
+        # uncomment this code if you'd like a solution to be written to a CSV
         # solutions can be plotted on a scatter graph in Excel as the x and y coordinates of each vehicle's destinations are outputted and in the order that they are serviced
-        if nondominated_set:
-            write_solution_for_graph(nondominated_set[0])"""
+        # if nondominated_set:
+        #    write_solution_for_graph(nondominated_set[0])
 
         for solution in nondominated_set:
             print(f"{os.linesep + str(solution)}")

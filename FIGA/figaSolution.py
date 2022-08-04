@@ -6,8 +6,8 @@ from problemInstance import ProblemInstance
 from solution import Solution
 
 class FIGASolution(Solution):
-    def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, num_vehicles: int=0) -> None:
-        super(FIGASolution, self).__init__(_id=_id, vehicles=vehicles, feasible=feasible, total_distance=total_distance)
+    def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, num_vehicles: int=0, temperature: float=0.0, default_temperature: float=0.0, cooling_rate: float=0.0) -> None:
+        super(FIGASolution, self).__init__(_id=_id, vehicles=vehicles, feasible=feasible, total_distance=total_distance, temperature=temperature, default_temperature=default_temperature, cooling_rate=cooling_rate)
         self.num_vehicles: int=int(num_vehicles) # the reason this objective is a variable instead of just using "len(vehicles)" is because if the solution is invalid, it needs to be set to a very high number
 
     def __str__(self) -> str:
@@ -29,4 +29,4 @@ class FIGASolution(Solution):
                     return
 
     def __deepcopy__(self, memodict: Dict=None) -> "FIGASolution":
-        return FIGASolution(_id=self.id, vehicles=[copy.deepcopy(v) for v in self.vehicles], feasible=self.feasible, total_distance=self.total_distance, num_vehicles=self.num_vehicles)
+        return FIGASolution(_id=self.id, vehicles=[copy.deepcopy(v) for v in self.vehicles], feasible=self.feasible, total_distance=self.total_distance, num_vehicles=self.num_vehicles, temperature=self.temperature, default_temperature=self.default_temperature, cooling_rate=self.cooling_rate)

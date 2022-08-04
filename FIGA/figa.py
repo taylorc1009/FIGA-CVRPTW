@@ -1,6 +1,7 @@
 import copy
+from math import exp, sqrt
 from time import process_time
-from typing import Deque, List, Dict, Set, Tuple
+from typing import Deque, List, Dict, Tuple
 from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle
 from destination import Destination
@@ -22,7 +23,7 @@ mutation_successes: Dict[int, int]={}
 def DTWIH(instance: ProblemInstance) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
     range_of_sorted_nodes = int(ceil(len(instance.nodes) / 10))
-    solution = FIGASolution(_id=0, vehicles=[Vehicle.create_route(instance)])
+    solution = FIGASolution(_id=0, vehicles=[])
 
     while sorted_nodes:
         shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
@@ -114,11 +115,11 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
 
     solution.objective_function(instance)"""
 
-def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: int=None) -> FIGASolution:
+def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None) -> FIGASolution:
     if exclude_solution:
         # if the non-dominated set isn't empty, and contains at least two solutions or one solution that is not "exclude_solution", then it is possible to use the non-dominated set
-        subject_list = nondominated_set if nondominated_set and (len(nondominated_set) > 2 or (len(nondominated_set) == 1 and not nondominated_set[0].id == exclude_solution)) and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population
-        return random.choice(list(filter(lambda s: s.id != exclude_solution, subject_list)))
+        subject_list = nondominated_set if nondominated_set and (len(nondominated_set) > 2 or (len(nondominated_set) == 1 and nondominated_set[0] is not exclude_solution)) and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population
+        return random.choice(list(filter(lambda s: s is not exclude_solution, subject_list)))
     return random.choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
 
 def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability) -> FIGASolution:
@@ -182,7 +183,57 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             return mutated_solution
     return solution
 
-def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, progress_indication_steps: Deque[float]) -> Tuple[List[FIGASolution], Dict[str, int]]:
+def calculate_cooling(i: int, temperature_max: float, temperature_min: float, temperature_stop: float, population_size: int, termination_condition: int) -> float:
+    # the calculate_cooling function simulates the genetic algorithm's iterations, from start to termination
+    # over and over again until it finds the cooling rate that gets a solution's temperature to "temperature_stop" at the same time that the "termination_condition" is reached
+    jump_temperatures = (temperature_max - temperature_min) / float(population_size - 1) if population_size > 1 else 0.0
+    temperature_aux = temperature_max - float(i) * jump_temperatures
+    error = float(INT_MAX)
+    max_error = 0.005 * float(termination_condition)
+    cooling_rate = 0.995
+    auxiliary_iterations = 0.0
+
+    while abs(error) > max_error and not auxiliary_iterations > termination_condition: # the original MMOEASA "Calculate_cooling" doesn't have the second condition, but mine (without it) gets an infinite loop (use the "print"s below to see)
+        #print(abs(error), maxError, cooling_rate, auxiliary_iterations)
+        temperature = temperature_aux
+        auxiliary_iterations = 0.0
+
+        while temperature > temperature_stop:
+            temperature *= cooling_rate
+            auxiliary_iterations += 1.0
+
+        #print(termination_condition, auxiliary_iterations)
+        error = float(termination_condition) - auxiliary_iterations
+        cooling_rate = cooling_rate + (0.05 / float(termination_condition)) if error > 0.0 else cooling_rate - (0.05 / float(termination_condition))
+
+    return cooling_rate
+
+def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution, parent: FIGASolution) -> float:
+    x1, y1 = child.total_distance, child.num_vehicles
+    x2, y2 = parent.total_distance, parent.num_vehicles
+    return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
+
+def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float) -> FIGASolution:
+    if is_nondominated(parent, child):
+        return child
+    elif temperature <= 0.00001:
+        return parent
+    else:
+        # d_df is a simulated deterioration (difference between the new and old solution) between the multi-objective variables
+        # the Metropolis function accepts a solution based on this deterioration when neither the parent nor child dominate
+        # the reason the deterioration needs to be simulated is that it cannot be calculated in a multi objective case; in a single-objective case, the deterioration would simply be "solution one's objective - solution two's objective"
+        # if the deterioration is low, there is a better chance that the Metropolis function will accept the child solution
+        d_df = euclidean_distance_dispersion(instance, child, parent)
+        # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
+        d_pt_pt = d_df / temperature ** 2
+        d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
+
+        if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
+            return child
+        else:
+            return parent
+
+def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[FIGASolution], Dict[str, int]]:
     population: List[FIGASolution] = list()
     nondominated_set: List[FIGASolution] = list()
 
@@ -191,6 +242,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     for i in range(0, population_size):
         population.insert(i, DTWIH(instance))
         population[i].id = i
+        population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
+        population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
             feasible_initialisations += 1
     initialiser_execution_time = round((process_time() - initialiser_execution_time) * 1000, 3)
@@ -199,17 +252,26 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     terminate = False
     iterations = 0
     while not terminate:
+        if population[0].temperature <= temperature_stop:
+            for s in range(len(population)):
+                population[s].temperature = population[s].default_temperature
+
         crossover_parent_two = selection_tournament(nondominated_set, population)
+
         for s, solution in enumerate(population):
             # if not solution.feasible:
             #     attempt_time_window_based_reorder(instance, solution)
 
-            child = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, solution.id), crossover_probability)
-            child = try_mutation(instance, child, mutation_probability)
-
-            if not solution.feasible or is_nondominated(solution, child):
+            solution.check_format_is_correct(instance)
+            child = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
+            child.check_format_is_correct(instance)
+            child = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability)
+            child.check_format_is_correct(instance)
+            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature) is not solution: # or is_nondominated(solution, child):
                 population[s] = child
                 check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
+
+            population[s].temperature *= population[s].cooling_rate
         iterations += 1
 
         if termination_type == "iterations":
