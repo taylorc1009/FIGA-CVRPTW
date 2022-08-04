@@ -19,6 +19,7 @@ crossover_invocations: int=0
 crossover_successes: Dict[int, int]={}
 mutation_invocations: int=0
 mutation_successes: Dict[int, int]={}
+metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0, 5:0}
 
 def DTWIH(instance: ProblemInstance) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
@@ -213,10 +214,18 @@ def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution
     x2, y2 = parent.total_distance, parent.num_vehicles
     return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
 
-def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float) -> FIGASolution:
+def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, temperature_stop: float, population: List[FIGASolution]=None) -> FIGASolution:
+    global metropolis_returns
+    if population:
+        for solution in population: # prevents recording duplicate solutions
+            if child.total_distance == solution.total_distance and child.num_vehicles == solution.num_vehicles:
+                metropolis_returns[1] += 1
+                return parent
     if is_nondominated(parent, child):
+        metropolis_returns[2] += 1
         return child
-    elif temperature <= 0.00001:
+    elif temperature <= temperature_stop:
+        metropolis_returns[3] += 1
         return parent
     else:
         # d_df is a simulated deterioration (difference between the new and old solution) between the multi-objective variables
@@ -229,8 +238,10 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
+            metropolis_returns[4] += 1
             return child
         else:
+            metropolis_returns[5] += 1
             return parent
 
 def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[FIGASolution], Dict[str, int]]:
@@ -262,12 +273,10 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             # if not solution.feasible:
             #     attempt_time_window_based_reorder(instance, solution)
 
-            solution.check_format_is_correct(instance)
             child = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
-            child.check_format_is_correct(instance)
-            child = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability)
-            child.check_format_is_correct(instance)
-            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature) is not solution: # or is_nondominated(solution, child):
+            child = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_stop), mutation_probability)
+
+            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
                 population[s] = child
                 check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
 
@@ -279,7 +288,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         elif termination_type == "seconds":
             terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population, progress_indication_steps)
 
-    global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes
+    global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes, metropolis_returns
     statistics = {
         "iterations": iterations,
         "initialiser_execution_time": f"{initialiser_execution_time} milliseconds",
@@ -289,7 +298,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         "total_successful_crossovers": sum(crossover_successes.values()),
         "mutation_invocations": mutation_invocations,
         "mutation_successes": dict(sorted(mutation_successes.items())),
-        "total_successful_mutations": sum(mutation_successes.values())
+        "total_successful_mutations": sum(mutation_successes.values()),
+        "metropolis_returns": metropolis_returns
     }
 
     return nondominated_set, statistics
