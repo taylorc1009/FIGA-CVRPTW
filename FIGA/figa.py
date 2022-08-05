@@ -21,10 +21,10 @@ mutation_invocations: int=0
 mutation_successes: Dict[int, int]={}
 metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0, 5:0}
 
-def DTWIH(instance: ProblemInstance) -> FIGASolution:
+def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
     range_of_sorted_nodes = int(ceil(len(instance.nodes) / 10))
-    solution = FIGASolution(_id=0, vehicles=[])
+    solution = FIGASolution(_id=_id, vehicles=[])
 
     while sorted_nodes:
         shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
@@ -251,8 +251,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     global initialiser_execution_time, feasible_initialisations
     initialiser_execution_time = process_time()
     for i in range(0, population_size):
-        population.insert(i, DTWIH(instance))
-        population[i].id = i
+        population.insert(i, DTWIH(instance, i))
         population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
