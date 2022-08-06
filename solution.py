@@ -2,8 +2,9 @@ from typing import List
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from common import INT_MAX
+from abc import ABC, abstractmethod
 
-class Solution:
+class Solution(ABC):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, rank: int=INT_MAX, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0) -> None:
         self.id: int=int(_id)
         self.vehicles: List[Vehicle]=vehicles if vehicles is not None else []
@@ -41,3 +42,7 @@ class Solution:
             raise ValueError("Indexes 0 and n - 1 should be depot nodes")
         elif node_nums.difference(set(d.node.number for v in self.vehicles for d in v.get_customers_visited())): # checks if all nodes have been visited; ".remove" will also find both: duplicate nodes as it will throw an exception when it tries to remove an already-removed node, and depot nodes in the middle of a route as the set starts at 1, so if it tries to remove the depot (node 0) it won't exist and throw an exception
             raise ValueError("Not all nodes are visited")
+
+    @abstractmethod
+    def objective_function(self, instance: ProblemInstance) -> None:
+        ...

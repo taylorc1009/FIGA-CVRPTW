@@ -25,7 +25,7 @@ class OmbukiSolution(Solution):
 
         self.total_distance = 0.0
         self.num_vehicles = len(self.vehicles)
-        self.feasible = True  # set the solution as feasible temporarily
+        self.feasible = True # set the solution as feasible temporarily
 
         for vehicle in self.vehicles:
             self.total_distance += vehicle.route_distance
