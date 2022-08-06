@@ -21,7 +21,7 @@ mutation_invocations: int=0
 mutation_successes: int=0
 
 def generate_random_solution(instance: ProblemInstance) -> Union[OmbukiSolution, MMOEASASolution]:
-    solution = OmbukiSolution(_id=0, vehicles=list()) if instance.acceptance_criterion == "OMBUKI" else MMOEASASolution(_id=0, vehicles=list())
+    solution = OmbukiSolution(_id=0) if instance.acceptance_criterion == "OMBUKI" else MMOEASASolution(_id=0)
 
     for i in range(1, len(instance.nodes)):
         infeasible_vehicles = set()

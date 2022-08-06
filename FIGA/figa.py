@@ -24,7 +24,7 @@ metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0, 5:0}
 def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
     range_of_sorted_nodes = int(ceil(len(instance.nodes) / 10))
-    solution = FIGASolution(_id=_id, vehicles=[])
+    solution = FIGASolution(_id=_id)
 
     while sorted_nodes:
         shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes

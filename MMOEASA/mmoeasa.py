@@ -23,7 +23,7 @@ mutation_successes: int=0
 def TWIH(instance: ProblemInstance) -> Union[MMOEASASolution, OmbukiSolution]:
     sorted_nodes = sorted([value for _, value in islice(instance.nodes.items(), 1, len(instance.nodes))], key=lambda x: x.ready_time) # sort every customer (except the depot; "islice" starts the list from node 1) by their ready_time
 
-    solution = MMOEASASolution(_id=0, vehicles=list()) if instance.acceptance_criterion == "MMOEASA" else OmbukiSolution(_id=0, vehicles=list())
+    solution = MMOEASASolution(_id=0) if instance.acceptance_criterion == "MMOEASA" else OmbukiSolution(_id=0)
     s = 0
 
     for _ in range(0, instance.amount_of_vehicles - 1):

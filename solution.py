@@ -6,7 +6,7 @@ from common import INT_MAX
 class Solution:
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, rank: int=INT_MAX, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0) -> None:
         self.id: int=int(_id)
-        self.vehicles: List[Vehicle]=vehicles
+        self.vehicles: List[Vehicle]=vehicles if vehicles is not None else []
         self.feasible: bool=feasible
         self.total_distance: float=float(total_distance)
 
