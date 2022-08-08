@@ -66,6 +66,9 @@ def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
 def is_nondominated(old_solution: FIGASolution, new_solution: FIGASolution) -> bool:
     return (new_solution.total_distance < old_solution.total_distance and new_solution.num_vehicles <= old_solution.num_vehicles) or (new_solution.total_distance <= old_solution.total_distance and new_solution.num_vehicles < old_solution.num_vehicles)
 
+def check_are_identical(solution_one: FIGASolution, solution_two: FIGASolution) -> bool:
+    return [d.node.number for v in sorted(solution_one.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()] == [d.node.number for v in sorted(solution_two.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()]
+
 def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subject_solution: FIGASolution) -> None:
     if not subject_solution.feasible:
         return
@@ -80,7 +83,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                 if is_nondominated(solution, solution_auxiliary):
                     solutions_to_remove.add(s)
                 elif is_nondominated(solution_auxiliary, solution) \
-                        or (solution.total_distance == solution_auxiliary.total_distance and solution.num_vehicles == solution_auxiliary.num_vehicles): # this "or" clause removes identical solutions
+                        or check_are_identical(solution, solution_auxiliary): # this "or" clause removes identical solutions, but it is not needed as "mo_metropolis" prevents duplicate solutions prior to this
                     solutions_to_remove.add(s_aux)
 
         if solutions_to_remove:
@@ -90,9 +93,8 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                     nondominated_set[i] = nondominated_set[s] # shift every solution whose list index is not in solutions_to_remove
                     i += 1
             if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
-                if i > 20:
-                    i = 20 # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
-                del nondominated_set[i:]
+                del nondominated_set[i if i < 20 else 20:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
+                return process_time() if subject_solution in nondominated_set else None
 
 """def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
     i = 0
@@ -218,7 +220,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
     global metropolis_returns
     if population:
         for solution in population: # prevents recording duplicate solutions
-            if child.total_distance == solution.total_distance and child.num_vehicles == solution.num_vehicles:
+            if check_are_identical(child, solution):
                 metropolis_returns[1] += 1
                 return parent
     if is_nondominated(parent, child):
@@ -261,6 +263,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     start = process_time()
     terminate = False
     iterations = 0
+    last_nds_update = None
     while not terminate:
         if population[0].temperature <= temperature_stop:
             for s in range(len(population)):
@@ -277,7 +280,13 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
 
             if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
                 population[s] = child
-                check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
+                nds_update = check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
+                if nds_update:
+                    last_nds_update = nds_update - start
+                    nds_str = ""
+                    for s, solution in enumerate(nondominated_set):
+                        nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s < len(nondominated_set) - 1 else "")
+                    print(nds_str)
 
             population[s].temperature *= population[s].cooling_rate
         iterations += 1
@@ -298,7 +307,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         "mutation_invocations": mutation_invocations,
         "mutation_successes": dict(sorted(mutation_successes.items())),
         "total_successful_mutations": sum(mutation_successes.values()),
-        "metropolis_returns": metropolis_returns
+        "metropolis_returns": metropolis_returns,
+        "final_nondominated_set_update": f"{round(last_nds_update, 1)}s"
     }
 
     return nondominated_set, statistics
