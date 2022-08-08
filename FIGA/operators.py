@@ -1,7 +1,7 @@
 import copy
 from random import shuffle
 from typing import List, Set, Tuple
-from FIGA.parameters import MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY
+from FIGA.parameters import MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_REVERSE_SWAP_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from common import INT_MAX, rand
 from problemInstance import ProblemInstance
@@ -143,15 +143,19 @@ def swap(l1: List, index_one: int, index_two: int, l2: List=None) -> None:
         l1[index_one], l1[index_two] = l1[index_two], l1[index_one]
 
 def TWBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Swap Mutator
-    longest_waiting_vehicle = select_route_with_longest_wait(solution)
+    vehicle = solution.vehicles[select_route_with_longest_wait(solution)]
+    reverse = rand(1, 100) < MUTATION_REVERSE_SWAP_PROBABILITY
 
-    for d in range(1, solution.vehicles[longest_waiting_vehicle].get_num_of_customers_visited()):
-        if solution.vehicles[longest_waiting_vehicle].destinations[d].node.ready_time > solution.vehicles[longest_waiting_vehicle].destinations[d + 1].node.ready_time:
-            swap(solution.vehicles[longest_waiting_vehicle].destinations, d, d + 1)
+    for d in range(1, vehicle.get_num_of_customers_visited()):
+        if not reverse and vehicle.destinations[d].node.ready_time > vehicle.destinations[d + 1].node.ready_time:
+            swap(vehicle.destinations, d, d + 1)
+            break
+        elif vehicle.destinations[d].node.ready_time < vehicle.destinations[d + 1].node.ready_time:
+            swap(vehicle.destinations, d + 1, d)
             break
 
-    solution.vehicles[longest_waiting_vehicle].calculate_destinations_time_windows(instance)
-    solution.vehicles[longest_waiting_vehicle].calculate_length_of_route(instance)
+    vehicle.calculate_destinations_time_windows(instance)
+    vehicle.calculate_length_of_route(instance)
     solution.objective_function(instance)
 
     return solution

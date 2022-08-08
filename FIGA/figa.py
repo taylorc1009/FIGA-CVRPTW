@@ -131,19 +131,19 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        probability = rand(1, 3)
+        probability = rand(1, 4)
 
         match probability:
             case 1:
                 crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
-            case 2 | 3: # crossover two has a 2/3 chance of occurring
+            case _: # crossover two has a 2/3 chance of occurring
                 vehicles_to_crossover = []
                 for _ in range(rand(1, CROSSOVER_MAX_VEHICLES)):
                     vehicles_to_crossover.append(rand(0, len(parent_two.vehicles) - 1, exclude_values=set(vehicles_to_crossover)))
                 crossover_solution = ES_crossover(instance, parent_one, [parent_two.vehicles[r] for r in vehicles_to_crossover])
 
         if is_nondominated(parent_one, crossover_solution):
-            if probability == 3:
+            if probability != 1:
                 probability = 2
             if not probability in crossover_successes:
                 crossover_successes[probability] = 1
