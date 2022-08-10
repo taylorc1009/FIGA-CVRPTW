@@ -2,7 +2,8 @@ import copy
 from math import exp, sqrt
 from time import process_time
 from typing import Deque, List, Dict, Tuple
-from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
+from constants import INT_MAX
+from common import rand, check_are_identical, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
@@ -66,9 +67,6 @@ def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
 def is_nondominated(old_solution: FIGASolution, new_solution: FIGASolution) -> bool:
     return (new_solution.total_distance < old_solution.total_distance and new_solution.num_vehicles <= old_solution.num_vehicles) or (new_solution.total_distance <= old_solution.total_distance and new_solution.num_vehicles < old_solution.num_vehicles)
 
-def check_are_identical(solution_one: FIGASolution, solution_two: FIGASolution) -> bool:
-    return [d.node.number for v in sorted(solution_one.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()] == [d.node.number for v in sorted(solution_two.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()]
-
 def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subject_solution: FIGASolution) -> None:
     if not subject_solution.feasible:
         return
@@ -77,7 +75,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
     solutions_to_remove = set()
 
     if len(nondominated_set) > 1:
-        for s, solution in enumerate(nondominated_set[:len(nondominated_set) - 1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
+        for s, solution in enumerate(nondominated_set[:-1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
             for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
                 # we need to check if both solutions dominate one another; s may not dominate s_aux, but s_aux may dominate s, and if neither dominate each other, then they still remain in the non-dominated set
                 if is_nondominated(solution, solution_auxiliary):

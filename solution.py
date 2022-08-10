@@ -1,7 +1,7 @@
 from typing import List
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
-from common import INT_MAX
+from constants import INT_MAX
 from abc import ABC, abstractmethod
 
 class Solution(ABC):

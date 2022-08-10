@@ -7,7 +7,8 @@ from typing import Dict, List, Set, Tuple
 from FIGA.figaSolution import FIGASolution
 from destination import Destination
 from problemInstance import ProblemInstance
-from common import rand, INT_MAX
+from constants import INT_MAX
+from common import rand
 from threading import Thread, currentThread
 from FIGA.figa import is_nondominated # if you move the double BCRC from this archive, this import will cause a circular import
 from vehicle import Vehicle

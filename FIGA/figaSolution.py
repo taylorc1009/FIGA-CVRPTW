@@ -24,8 +24,8 @@ class FIGASolution(Solution):
             for destination in vehicle.get_customers_visited():
                 if destination.arrival_time > destination.node.due_date or vehicle.current_capacity > instance.capacity_of_vehicles:
                     self.feasible = False
-                    self.total_distance = INT_MAX
-                    self.num_vehicles = INT_MAX
+                    self.total_distance = float(INT_MAX)
+                    self.num_vehicles = float(INT_MAX)
                     return
 
     def __deepcopy__(self, memodict: Dict=None) -> "FIGASolution":

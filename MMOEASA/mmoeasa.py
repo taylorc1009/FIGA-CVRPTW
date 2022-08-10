@@ -9,7 +9,8 @@ from Ombuki.ombukiSolution import OmbukiSolution
 from problemInstance import ProblemInstance
 from destination import Destination
 from vehicle import Vehicle
-from common import INT_MAX, rand, check_iterations_termination_condition, check_seconds_termination_condition
+from constants import INT_MAX
+from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
 from typing import Callable, Deque, List, Tuple, Union, Dict
 from numpy import sqrt, exp
 

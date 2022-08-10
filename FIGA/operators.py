@@ -3,7 +3,8 @@ from random import shuffle
 from typing import List, Set, Tuple
 from FIGA.parameters import MUTATION_DISTANCE_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_REVERSE_SWAP_PROBABILITY
 from FIGA.figaSolution import FIGASolution
-from common import INT_MAX, rand
+from constants import INT_MAX
+from common import rand
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
 
@@ -163,7 +164,7 @@ def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]=No
 
     return furthest_traveling_vehicle
 
-"""def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Transfer Mutator
+def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Transfer Mutator
     first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
     second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
     first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
@@ -191,7 +192,7 @@ def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]=No
             solution.objective_function(instance)
             break
     
-    return solution"""
+    return solution
 
 def DBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Swap Mutator
     first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)

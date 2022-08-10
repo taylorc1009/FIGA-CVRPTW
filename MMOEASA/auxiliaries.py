@@ -1,5 +1,5 @@
 from typing import List, Union, Callable
-from common import INT_MAX
+from constants import INT_MAX
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 from Ombuki.ombukiSolution import OmbukiSolution
 from problemInstance import ProblemInstance
@@ -21,7 +21,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[Union[MMOEASASoluti
 
     # check commentary of "check_nondominated_set_acceptance" in "../FIGA/figa.py"
     if len(nondominated_set) > 1:
-        for s, solution in enumerate(nondominated_set[:len(nondominated_set) - 1]):
+        for s, solution in enumerate(nondominated_set[:-1]):
             for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1):
                 if nondominated_check(solution, solution_auxiliary):
                     solutions_to_remove.add(s)

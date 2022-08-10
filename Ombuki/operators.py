@@ -9,7 +9,8 @@ from threading import Thread, currentThread
 from destination import Destination
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
-from common import rand, INT_MAX
+from common import rand
+from constants import INT_MAX
 
 def set_up_crossover_child(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEASASolution], parent_two_vehicle: Vehicle) -> OmbukiSolution:
     crossover_solution = copy.deepcopy(parent_one)

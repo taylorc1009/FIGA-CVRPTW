@@ -1,6 +1,6 @@
 import copy
 from typing import List, Dict
-from common import INT_MAX
+from constants import INT_MAX
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from solution import Solution
@@ -15,7 +15,7 @@ class OmbukiSolution(Solution):
 
     def __nullify(self) -> None:
         self.feasible = False
-        self.total_distance = INT_MAX
+        self.total_distance = float(INT_MAX)
         self.num_vehicles = INT_MAX
 
     def objective_function(self, instance: ProblemInstance) -> None:

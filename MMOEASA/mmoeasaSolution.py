@@ -1,7 +1,7 @@
 import copy
 from typing import List, Dict
 from MMOEASA.constants import INFINITY
-from common import INT_MAX
+from constants import INT_MAX
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from solution import Solution
@@ -26,17 +26,17 @@ class MMOEASASolution(Solution):
             for destination in self.vehicles[vehicle].get_customers_visited():
                 if destination.arrival_time > instance.nodes[destination.node.number].due_date or self.vehicles[vehicle].current_capacity > instance.capacity_of_vehicles:
                     self.feasible = False
-                    self.total_distance = INFINITY
-                    self.distance_unbalance = INFINITY
-                    self.cargo_unbalance = INFINITY
+                    self.total_distance = float(INFINITY)
+                    self.distance_unbalance = float(INFINITY)
+                    self.cargo_unbalance = float(INFINITY)
                     break
             vehicle += 1
 
         if self.feasible:
-            minimum_distance = INFINITY
-            maximum_distance = 0
-            minimum_cargo = INFINITY
-            maximum_cargo = 0
+            minimum_distance = float(INFINITY)
+            maximum_distance = 0.0
+            minimum_cargo = float(INFINITY)
+            maximum_cargo = 0.0
 
             for vehicle in self.vehicles:
                 # these cannot be converted to "if ... elif" because we may miss, for example, our "maximum_distance" as on the first iteration it will also be less than "INFINITY" ("minimum_distance")
