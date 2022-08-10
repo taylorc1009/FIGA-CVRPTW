@@ -1,7 +1,7 @@
 import copy
 from random import shuffle
 from typing import List, Set, Tuple
-from FIGA.parameters import MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_REVERSE_SWAP_PROBABILITY
+from FIGA.parameters import MUTATION_DISTANCE_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_REVERSE_SWAP_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from common import INT_MAX, rand
 from problemInstance import ProblemInstance
@@ -74,7 +74,7 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
                         #lowest_ready_time_difference = abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous)
                         best_vehicle, best_position, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
 
-        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles:# and not best_vehicle < instance.amount_of_vehicles:
+        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and not best_vehicle < instance.amount_of_vehicles:
             best_vehicle = len(crossover_solution.vehicles)
             crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
         else:
@@ -124,18 +124,6 @@ def select_route_with_longest_wait(solution: FIGASolution) -> int:
     # check if not >= 0 instead of using "else" in case no vehicle has a wait time; this will never be the case, but this is here to be safe
     return longest_waiting_vehicle if longest_waiting_vehicle >= 0 else select_random_vehicle(solution)
 
-"""def TWBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Sort Mutator
-    longest_waiting_vehicle = select_route_with_longest_wait(solution)
-
-    # sort all destinations between 1 and n - 1 by ready_time (exclude 1 and n - 1 as they're the depot nodes)
-    solution.vehicles[longest_waiting_vehicle].destinations[1:-1] = sorted(solution.vehicles[longest_waiting_vehicle].get_customers_visited(), key=lambda d: d.node.ready_time)
-
-    solution.vehicles[longest_waiting_vehicle].calculate_destinations_time_windows(instance)
-    solution.vehicles[longest_waiting_vehicle].calculate_length_of_route(instance)
-    solution.objective_function(instance)
-
-    return solution"""
-
 def swap(l1: List, index_one: int, index_two: int, l2: List=None) -> None:
     if l2:
         l1[index_one], l2[index_two] = l2[index_two], l1[index_one]
@@ -147,11 +135,9 @@ def TWBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
     reverse = rand(1, 100) < MUTATION_REVERSE_SWAP_PROBABILITY
 
     for d in range(1, vehicle.get_num_of_customers_visited()):
-        if not reverse and vehicle.destinations[d].node.ready_time > vehicle.destinations[d + 1].node.ready_time:
+        if (not reverse and vehicle.destinations[d].node.ready_time > vehicle.destinations[d + 1].node.ready_time) \
+            or (reverse and vehicle.destinations[d].node.ready_time < vehicle.destinations[d + 1].node.ready_time):
             swap(vehicle.destinations, d, d + 1)
-            break
-        elif vehicle.destinations[d].node.ready_time < vehicle.destinations[d + 1].node.ready_time:
-            swap(vehicle.destinations, d + 1, d)
             break
 
     vehicle.calculate_destinations_time_windows(instance)
@@ -177,13 +163,12 @@ def get_far_traveling_vehicle(solution: FIGASolution, skip_vehicles: Set[int]=No
 
     return furthest_traveling_vehicle
 
-def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Transfer Mutator
+"""def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Transfer Mutator
     first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
     second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
-
     first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
 
-    """for d in range(1, min(first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()) + 1):
+    for d in range(1, min(first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()) + 1):
         distance_from_previous = instance.get_distance(first_vehicle.destinations[d - 1].node.number, second_vehicle.destinations[d].node.number)
         
         simulated_arrival_time = first_vehicle.destinations[d - 1].departure_time + distance_from_previous
@@ -204,37 +189,83 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
             second_vehicle.calculate_destinations_time_windows(instance)
             second_vehicle.calculate_vehicle_load()
             solution.objective_function(instance)
-            break"""
+            break
+    
+    return solution"""
+
+def DBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Swap Mutator
+    first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
+    second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
+    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
 
     for d1 in range(1, first_vehicle.get_num_of_customers_visited()):
         for d2 in range(1, second_vehicle.get_num_of_customers_visited()):
-            first_distance_from_previous = instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, second_vehicle.destinations[d2].node.number)
-            second_distance_from_previous = instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, first_vehicle.destinations[d1].node.number)
-            
-            first_simulated_arrival_time = first_vehicle.destinations[d1 - 1].departure_time + first_distance_from_previous
-            if first_simulated_arrival_time < second_vehicle.destinations[d2].node.ready_time:
-                first_simulated_arrival_time = second_vehicle.destinations[d2].node.ready_time
-            first_simulated_departure_time = first_simulated_arrival_time + second_vehicle.destinations[d2].node.service_duration
-            
-            second_simulated_arrival_time = second_vehicle.destinations[d2 - 1].departure_time + second_distance_from_previous
-            if second_simulated_arrival_time < first_vehicle.destinations[d1].node.ready_time:
-                second_simulated_arrival_time = first_vehicle.destinations[d1].node.ready_time
-            second_simulated_departure_time = second_simulated_arrival_time + first_vehicle.destinations[d1].node.service_duration
-
-            if instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, second_vehicle.destinations[d2].node.number) <= instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, first_vehicle.destinations[d1].node.number) \
-                and instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, first_vehicle.destinations[d1].node.number) <= instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, second_vehicle.destinations[d2].node.number) \
-                and first_simulated_departure_time + instance.get_distance(second_vehicle.destinations[d2].node.number, first_vehicle.destinations[d1 + 1].node.number) < first_vehicle.destinations[d1 + 1].node.due_date \
-                and second_simulated_departure_time + instance.get_distance(first_vehicle.destinations[d1].node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date:
-                swap(first_vehicle.destinations, d1, d2, l2=second_vehicle.destinations)
+            if rand(1, 100) <= MUTATION_DISTANCE_SWAP_PROBABILITY:
+                first_distance_from_previous = instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, second_vehicle.destinations[d2].node.number)
+                second_distance_from_previous = instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, first_vehicle.destinations[d1].node.number)
                 
-                first_vehicle.calculate_length_of_route(instance)
-                first_vehicle.calculate_destinations_time_windows(instance)
-                first_vehicle.calculate_vehicle_load()
-                second_vehicle.calculate_length_of_route(instance)
-                second_vehicle.calculate_destinations_time_windows(instance)
-                second_vehicle.calculate_vehicle_load()
-                solution.objective_function(instance)
-                break
+                first_simulated_arrival_time = first_vehicle.destinations[d1 - 1].departure_time + first_distance_from_previous
+                if first_simulated_arrival_time < second_vehicle.destinations[d2].node.ready_time:
+                    first_simulated_arrival_time = second_vehicle.destinations[d2].node.ready_time
+                first_simulated_departure_time = first_simulated_arrival_time + second_vehicle.destinations[d2].node.service_duration
+                
+                second_simulated_arrival_time = second_vehicle.destinations[d2 - 1].departure_time + second_distance_from_previous
+                if second_simulated_arrival_time < first_vehicle.destinations[d1].node.ready_time:
+                    second_simulated_arrival_time = first_vehicle.destinations[d1].node.ready_time
+                second_simulated_departure_time = second_simulated_arrival_time + first_vehicle.destinations[d1].node.service_duration
+
+                if first_distance_from_previous <= instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, first_vehicle.destinations[d1].node.number) \
+                    and second_distance_from_previous <= instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, second_vehicle.destinations[d2].node.number) \
+                    and first_simulated_departure_time + instance.get_distance(second_vehicle.destinations[d2].node.number, first_vehicle.destinations[d1 + 1].node.number) < first_vehicle.destinations[d1 + 1].node.due_date \
+                    and second_simulated_departure_time + instance.get_distance(first_vehicle.destinations[d1].node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date:
+                    swap(first_vehicle.destinations, d1, d2, l2=second_vehicle.destinations)
+                    
+                    first_vehicle.calculate_length_of_route(instance)
+                    first_vehicle.calculate_destinations_time_windows(instance)
+                    first_vehicle.calculate_vehicle_load()
+                    second_vehicle.calculate_length_of_route(instance)
+                    second_vehicle.calculate_destinations_time_windows(instance)
+                    second_vehicle.calculate_vehicle_load()
+                    solution.objective_function(instance)
+                    break
+
+    return solution
+
+def LDHR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Low Distance and High Ready-time Mutator
+    first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
+    second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
+    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
+
+    for d1 in range(1, first_vehicle.get_num_of_customers_visited()):
+        for d2 in range(1, second_vehicle.get_num_of_customers_visited()):
+            if rand(1, 100) <= MUTATION_DISTANCE_SWAP_PROBABILITY:
+                first_distance_from_previous = instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, second_vehicle.destinations[d2].node.number)
+                second_distance_from_previous = instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, first_vehicle.destinations[d1].node.number)
+                
+                first_simulated_arrival_time = first_vehicle.destinations[d1 - 1].departure_time + first_distance_from_previous
+                if first_simulated_arrival_time < second_vehicle.destinations[d2].node.ready_time:
+                    first_simulated_arrival_time = second_vehicle.destinations[d2].node.ready_time
+                first_simulated_departure_time = first_simulated_arrival_time + second_vehicle.destinations[d2].node.service_duration
+                
+                second_simulated_arrival_time = second_vehicle.destinations[d2 - 1].departure_time + second_distance_from_previous
+                if second_simulated_arrival_time < first_vehicle.destinations[d1].node.ready_time:
+                    second_simulated_arrival_time = first_vehicle.destinations[d1].node.ready_time
+                second_simulated_departure_time = second_simulated_arrival_time + first_vehicle.destinations[d1].node.service_duration
+
+                if first_distance_from_previous <= second_vehicle.destinations[d2].node.ready_time - first_vehicle.destinations[d1 - 1].node.ready_time \
+                    and second_distance_from_previous <= first_vehicle.destinations[d1].node.ready_time - second_vehicle.destinations[d2 - 1].node.ready_time \
+                    and first_simulated_departure_time + instance.get_distance(second_vehicle.destinations[d2].node.number, first_vehicle.destinations[d1 + 1].node.number) < first_vehicle.destinations[d1 + 1].node.due_date \
+                    and second_simulated_departure_time + instance.get_distance(first_vehicle.destinations[d1].node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date:
+                    swap(first_vehicle.destinations, d1, d2, l2=second_vehicle.destinations)
+                    
+                    first_vehicle.calculate_length_of_route(instance)
+                    first_vehicle.calculate_destinations_time_windows(instance)
+                    first_vehicle.calculate_vehicle_load()
+                    second_vehicle.calculate_length_of_route(instance)
+                    second_vehicle.calculate_destinations_time_windows(instance)
+                    second_vehicle.calculate_vehicle_load()
+                    solution.objective_function(instance)
+                    break
 
     return solution
 

@@ -7,7 +7,7 @@ from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import ATBR_mutation, FBS_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover
+from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover
 from FIGA.parameters import CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST
 from vehicle import Vehicle
 from numpy import ceil, random
@@ -19,7 +19,7 @@ crossover_invocations: int=0
 crossover_successes: Dict[int, int]={}
 mutation_invocations: int=0
 mutation_successes: Dict[int, int]={}
-metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0, 5:0}
+metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0}
 
 def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
@@ -136,7 +136,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         match probability:
             case 1:
                 crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
-            case _: # crossover two has a 2/3 chance of occurring
+            case _: # crossover two has a higher chance of occurring
                 vehicles_to_crossover = []
                 for _ in range(rand(1, CROSSOVER_MAX_VEHICLES)):
                     vehicles_to_crossover.append(rand(0, len(parent_two.vehicles) - 1, exclude_values=set(vehicles_to_crossover)))
@@ -158,11 +158,9 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(1, 6)
+        probability = rand(2, 7)
 
         match probability:
-            case 1:
-                mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 2:
                 mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
             case 3:
@@ -172,11 +170,15 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 5:
                 mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
             case 6:
-                mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+                mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
+            case 7:
+                mutated_solution = LDHR_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
         """case 1:
-            mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Sort Mutator
+            mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
         case 5:
-            mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator"""
+            mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
+        case 6:
+            mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator"""
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:
@@ -218,16 +220,15 @@ def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution
 
 def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, temperature_stop: float, population: List[FIGASolution]=None) -> FIGASolution:
     global metropolis_returns
-    if population:
-        for solution in population: # prevents recording duplicate solutions
-            if check_are_identical(child, solution):
-                metropolis_returns[1] += 1
-                return parent
-    if is_nondominated(parent, child):
-        metropolis_returns[2] += 1
+    if not population:
+        population = []
+    duplicate = any(check_are_identical(child, solution) for solution in population)
+
+    if is_nondominated(parent, child) and not duplicate:
+        metropolis_returns[1] += 1
         return child
     elif temperature <= temperature_stop:
-        metropolis_returns[3] += 1
+        metropolis_returns[2] += 1
         return parent
     else:
         # d_df is a simulated deterioration (difference between the new and old solution) between the multi-objective variables
@@ -236,14 +237,14 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         # if the deterioration is low, there is a better chance that the Metropolis function will accept the child solution
         d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
-        d_pt_pt = d_df / temperature ** 2
+        d_pt_pt = d_df / temperature ** (2 if not duplicate else 4 - temperature / 10 ** len(str(temperature).split(".")[0]))
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
-            metropolis_returns[4] += 1
+            metropolis_returns[3] += 1
             return child
         else:
-            metropolis_returns[5] += 1
+            metropolis_returns[4] += 1
             return parent
 
 def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[FIGASolution], Dict[str, int]]:
