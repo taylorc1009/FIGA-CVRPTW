@@ -11,7 +11,7 @@ class FIGASolution(Solution):
         self.num_vehicles: int=int(num_vehicles) # the reason this objective is a variable instead of just using "len(vehicles)" is because if the solution is invalid, it needs to be set to a very high number
 
     def __str__(self) -> str:
-        return f"total_distance={self.total_distance}, num_vehicles={self.num_vehicles}, {len(self.vehicles)=}, {[f'{i}. {str(v)}' for i, v in enumerate(self.vehicles)]}"
+        return f"total_distance={self.total_distance}, num_vehicles={self.num_vehicles}, {len(self.vehicles)=}, {[str(v) for v in sorted(self.vehicles, key=lambda v: v.destinations[1].node.number)]}"
 
     def objective_function(self, instance: ProblemInstance) -> None:
         self.total_distance = 0.0
