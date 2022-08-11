@@ -1,7 +1,7 @@
 import copy
 from math import exp, sqrt
 from time import process_time
-from typing import Deque, List, Dict, Tuple
+from typing import Deque, List, Dict, Tuple, Union
 from constants import INT_MAX
 from common import rand, check_are_identical, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle
@@ -17,9 +17,9 @@ from numpy import ceil, random
 initialiser_execution_time: int=0
 feasible_initialisations: int=0
 crossover_invocations: int=0
-crossover_successes: Dict[int, int]={}
+crossover_acceptances: Dict[int, int]={}
 mutation_invocations: int=0
-mutation_successes: Dict[int, int]={}
+mutation_acceptances: Dict[int, int]={}
 metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0}
 
 def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
@@ -123,9 +123,9 @@ def selection_tournament(nondominated_set: List[FIGASolution], population: List[
         return random.choice(list(filter(lambda s: s is not exclude_solution, subject_list)))
     return random.choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
 
-def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability) -> FIGASolution:
+def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < crossover_probability:
-        global crossover_invocations, crossover_successes
+        global crossover_invocations, crossover_acceptances
         crossover_invocations += 1
 
         crossover_solution = None
@@ -140,19 +140,12 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
                     vehicles_to_crossover.append(rand(0, len(parent_two.vehicles) - 1, exclude_values=set(vehicles_to_crossover)))
                 crossover_solution = ES_crossover(instance, parent_one, [parent_two.vehicles[r] for r in vehicles_to_crossover])
 
-        if is_nondominated(parent_one, crossover_solution):
-            if probability != 1:
-                probability = 2
-            if not probability in crossover_successes:
-                crossover_successes[probability] = 1
-            else:
-                crossover_successes[probability] += 1
-        return crossover_solution
-    return parent_one
+        return crossover_solution, probability
+    return parent_one, None
 
-def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int) -> FIGASolution:
+def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < mutation_probability:
-        global mutation_invocations, mutation_successes
+        global mutation_invocations, mutation_acceptances
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
@@ -178,13 +171,8 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 9:
                 mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
 
-        if is_nondominated(solution, mutated_solution):
-            if not probability in mutation_successes:
-                mutation_successes[probability] = 1
-            else:
-                mutation_successes[probability] += 1
-            return mutated_solution
-    return solution
+        return mutated_solution, probability
+    return solution, None
 
 def calculate_cooling(i: int, temperature_max: float, temperature_min: float, temperature_stop: float, population_size: int, termination_condition: int) -> float:
     # the calculate_cooling function simulates the genetic algorithm's iterations, from start to termination
@@ -249,7 +237,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     population: List[FIGASolution] = list()
     nondominated_set: List[FIGASolution] = list()
 
-    global initialiser_execution_time, feasible_initialisations
+    global initialiser_execution_time, feasible_initialisations, mutation_acceptances, crossover_acceptances
     initialiser_execution_time = process_time()
     for i in range(0, population_size):
         population.insert(i, DTWIH(instance, i))
@@ -274,11 +262,12 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             # if not solution.feasible:
             #     attempt_time_window_based_reorder(instance, solution)
 
-            child = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
-            child = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_stop), mutation_probability)
+            child, crossover = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
+            child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_stop), mutation_probability)
 
             if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
                 population[s] = child
+
                 nds_update = check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
                 if nds_update:
                     last_nds_update = nds_update - start
@@ -286,6 +275,19 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                     for s, solution in enumerate(nondominated_set):
                         nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s < len(nondominated_set) - 1 else "")
                     print(nds_str)
+
+                if crossover:
+                    if crossover != 1:
+                        crossover = 2
+                    if not crossover in crossover_acceptances:
+                        crossover_acceptances[crossover] = 1
+                    else:
+                        crossover_acceptances[crossover] += 1
+                if mutator:
+                    if not mutator in mutation_acceptances:
+                        mutation_acceptances[mutator] = 1
+                    else:
+                        mutation_acceptances[mutator] += 1
 
             population[s].temperature *= population[s].cooling_rate
         iterations += 1
@@ -295,17 +297,17 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         elif termination_type == "seconds":
             terminate = check_seconds_termination_condition(start, termination_condition, len(nondominated_set), population, progress_indication_steps)
 
-    global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes, metropolis_returns
+    global crossover_invocations, mutation_invocations, metropolis_returns
     statistics = {
         "iterations": iterations,
         "initialiser_execution_time": f"{initialiser_execution_time} milliseconds",
         "feasible_initialisations": feasible_initialisations,
         "crossover_invocations": crossover_invocations,
-        "crossover_successes": dict(sorted(crossover_successes.items())),
-        "total_successful_crossovers": sum(crossover_successes.values()),
+        "crossover_acceptances": dict(sorted(crossover_acceptances.items())),
+        "total_accepted_crossovers": sum(crossover_acceptances.values()),
         "mutation_invocations": mutation_invocations,
-        "mutation_successes": dict(sorted(mutation_successes.items())),
-        "total_successful_mutations": sum(mutation_successes.values()),
+        "mutation_acceptances": dict(sorted(mutation_acceptances.items())),
+        "total_accepted_mutations": sum(mutation_acceptances.values()),
         "metropolis_returns": metropolis_returns,
         "final_nondominated_set_update": f"{round(last_nds_update, 1)}s"
     }
