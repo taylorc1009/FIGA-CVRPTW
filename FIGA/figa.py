@@ -129,7 +129,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        probability = rand(1, 4)
+        probability = rand(1, 2)
 
         match probability:
             case 1:
@@ -156,9 +156,11 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(2, 7)
+        probability = rand(2, 8)
 
         match probability:
+            case 1:
+                mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 2:
                 mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
             case 3:
@@ -171,12 +173,10 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
                 mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
             case 7:
                 mutated_solution = LDHR_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
-        """case 1:
-            mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
-        case 5:
-            mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
-        case 6:
-            mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator"""
+            case 8:
+                mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+            case 9:
+                mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
 
         if is_nondominated(solution, mutated_solution):
             if not probability in mutation_successes:
@@ -235,7 +235,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         # if the deterioration is low, there is a better chance that the Metropolis function will accept the child solution
         d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
-        d_pt_pt = d_df / temperature ** (2 if not duplicate else 4 - temperature / 10 ** len(str(temperature).split(".")[0]))
+        d_pt_pt = d_df / temperature ** (2 if not duplicate else 2 - temperature / 10 ** len(str(temperature).split(".")[0]))
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
