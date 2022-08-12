@@ -129,7 +129,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        probability = rand(1, 2)
+        probability = rand(1, 4)
 
         match probability:
             case 1:
@@ -149,7 +149,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(2, 9)
+        mutator = rand(2, 8)
 
         match mutator:
             case 1:
@@ -161,16 +161,15 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 4:
                 mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
             case 5:
-                mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
-            case 6:
                 mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
-            case 7:
+            case 6:
                 mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
-            case 8:
+            case 7:
                 mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
-            case 9:
+            case 8:
                 mutated_solution = VE_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
-
+        """case 5:
+            mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator"""
         return mutated_solution, mutator
     return solution, None
 
@@ -204,7 +203,7 @@ def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution
     x2, y2 = parent.total_distance, parent.num_vehicles
     return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
 
-def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, temperature_stop: float, population: List[FIGASolution]=None) -> FIGASolution:
+def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature_max: float, temperature: float, temperature_stop: float, population: List[FIGASolution]=None) -> FIGASolution:
     global metropolis_returns
     if not population:
         population = []
@@ -223,7 +222,8 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         # if the deterioration is low, there is a better chance that the Metropolis function will accept the child solution
         d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
-        d_pt_pt = d_df / temperature ** (2 if not duplicate else 2 - temperature / 10 ** len(str(temperature).split(".")[0]))
+        mantissa_length = len(str(temperature).split(".")[0])
+        d_pt_pt = d_df / temperature ** (2 if not duplicate else (temperature_max / 10 ** mantissa_length) - (temperature / 10 ** mantissa_length))
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
@@ -263,13 +263,13 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             #     attempt_time_window_based_reorder(instance, solution)
 
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
-            child = mo_metropolis(instance, solution, child, solution.temperature, temperature_stop)
+            child = mo_metropolis(instance, solution, child, temperature_max, solution.temperature, temperature_stop)
             mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
                 child, mutator = try_mutation(instance, child, mutation_probability)
                 mutations.append(mutator)
 
-            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
+            if not solution.feasible or mo_metropolis(instance, solution, child, temperature_max, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
                 population[s] = child
 
                 nds_update = check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there

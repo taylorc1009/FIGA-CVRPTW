@@ -1,7 +1,7 @@
 import copy
 from random import shuffle
 from typing import List, Set, Tuple
-from FIGA.parameters import MUTATION_DISTANCE_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY
+from FIGA.parameters import MUTATION_DISTANCE_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_SHORT_ROUTE_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
@@ -77,7 +77,6 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
                         best_vehicle_by_time, best_position_by_time, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
 
-        #print(best_vehicle_by_distance, best_position_by_distance, best_vehicle_by_time, best_position_by_time)
         # best_vehicle, best_position = (best_vehicle_by_time, best_position_by_time) \
         #     if not (best_vehicle_by_distance is not None and best_position_by_distance is not None) or (rand(0, 1) and best_vehicle_by_time is not None and best_position_by_time is not None) \
         #     else (best_vehicle_by_distance, best_position_by_distance)
@@ -418,9 +417,17 @@ def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
 
     return solution
 
-def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution:
+def select_short_route(solution: FIGASolution) -> int:
+    vehicles = sorted(range(len(solution.vehicles)), key=lambda v: solution.vehicles[v].get_num_of_customers_visited())
+
+    boundary = min(3, round(len(vehicles) / 2))
+    for i, v in enumerate(vehicles[:boundary]):
+        if rand(1, 100) < 50 or i == boundary - 1:
+            return v
+
+def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Vehicle Elimination Mutator
     # select a random vehicle and try to move all of its destinations into feasible positions in other vehicles; destinations that cannot be moved will remain in the original randomly selected vehicle
-    random_origin_vehicle = select_random_vehicle(solution)
+    random_origin_vehicle = select_short_route(solution) if rand(1, 100) < MUTATION_SHORT_ROUTE_PROBABILITY else select_random_vehicle(solution)
 
     infeasible_node_reallocations = 0
     for _ in range(1, solution.vehicles[random_origin_vehicle].get_num_of_customers_visited() + 1):
