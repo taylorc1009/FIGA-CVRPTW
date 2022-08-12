@@ -31,10 +31,13 @@ class FIGASolution(Solution):
         self.feasible = True # set the solution as feasible temporarily
 
         for vehicle in self.vehicles:
-            self.total_distance += vehicle.route_distance
+            if vehicle.current_capacity > instance.capacity_of_vehicles:
+                self.__nullify()
+                return
 
+            self.total_distance += vehicle.route_distance
             for destination in vehicle.get_customers_visited():
-                if destination.arrival_time > destination.node.due_date or vehicle.current_capacity > instance.capacity_of_vehicles:
+                if destination.arrival_time > destination.node.due_date:
                     self.__nullify()
                     return
 

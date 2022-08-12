@@ -48,5 +48,5 @@ class Solution(ABC):
         ...
 
     @abstractclassmethod
-    def is_valid(self, instance: ProblemInstance, file: str) -> bool:
+    def is_valid(self, filename: str) -> "Solution":
         ...

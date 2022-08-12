@@ -28,12 +28,18 @@ class OmbukiSolution(Solution):
         self.feasible = True # set the solution as feasible temporarily
 
         for vehicle in self.vehicles:
-            self.total_distance += vehicle.route_distance
+            if vehicle.current_capacity > instance.capacity_of_vehicles:
+                self.__nullify()
+                return
 
+            self.total_distance += vehicle.route_distance
             for destination in vehicle.get_customers_visited():
-                if destination.arrival_time > instance.nodes[destination.node.number].due_date or vehicle.current_capacity > instance.capacity_of_vehicles:
+                if destination.arrival_time > instance.nodes[destination.node.number].due_date:
                     self.__nullify()
                     return
 
     def __deepcopy__(self, memodict: Dict=None) -> "OmbukiSolution":
         return OmbukiSolution(_id=self.id, vehicles=[copy.deepcopy(v) for v in self.vehicles], feasible=self.feasible, default_temperature=self.default_temperature, temperature=self.temperature, cooling_rate=self.cooling_rate, total_distance=self.total_distance, num_vehicles=self.num_vehicles, rank=self.rank)
+
+    def is_valid(self, filename: str) -> "OmbukiSolution":
+        ...
