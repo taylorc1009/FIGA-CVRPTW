@@ -136,7 +136,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
                 crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
             case _: # crossover two has a higher chance of occurring
                 vehicles_to_crossover = []
-                for _ in range(rand(1, CROSSOVER_MAX_VEHICLES)):
+                for _ in range(rand(1, min(CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))): # the "min" function prevents an infinite loop that occurs when CROSSOVER_MAX_VEHICLES is larger than the number of vehicles in parent_two
                     vehicles_to_crossover.append(rand(0, len(parent_two.vehicles) - 1, exclude_values=set(vehicles_to_crossover)))
                 crossover_solution = ES_crossover(instance, parent_one, [parent_two.vehicles[r] for r in vehicles_to_crossover])
 
