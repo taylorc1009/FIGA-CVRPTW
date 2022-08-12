@@ -1,9 +1,12 @@
 import copy
 from typing import List, Dict
 from common import INT_MAX
+from data import open_problem_instance
+from destination import Destination
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from solution import Solution
+from pathlib import Path
 
 class FIGASolution(Solution):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, num_vehicles: int=0, temperature: float=0.0, default_temperature: float=0.0, cooling_rate: float=0.0) -> None:
@@ -37,3 +40,26 @@ class FIGASolution(Solution):
 
     def __deepcopy__(self, memodict: Dict=None) -> "FIGASolution":
         return FIGASolution(_id=self.id, vehicles=[copy.deepcopy(v) for v in self.vehicles], feasible=self.feasible, total_distance=self.total_distance, num_vehicles=self.num_vehicles, temperature=self.temperature, default_temperature=self.default_temperature, cooling_rate=self.cooling_rate)
+
+    @classmethod
+    def is_valid(cls, filename: str) -> "FIGASolution":
+        relative_path = f"{str(Path(__file__).parent.resolve())}\\{filename}"
+        solution = cls(_id=0)
+
+        try:
+            with open(relative_path, 'r') as file:
+                problem_path = file.readline().strip() # because the problem name is the first line in the text files, this line quickly adds it to a variable (so we can add it to a "ProblemInstance" object later"
+                instance = open_problem_instance("FIGA", problem_path, "OMBUKI")
+                for line in file:
+                    cur_line = line.split()[0]
+                    solution.vehicles.append(Vehicle.create_route(instance, [Destination(node=instance.nodes[int(n)]) for n in cur_line.split(',')]))
+        except FileNotFoundError as e:
+            exc = FileNotFoundError(f"Couldn't open file \"{filename}\"\nCause: {e}")
+            raise exc from None
+
+        solution.calculate_length_of_routes(instance)
+        solution.calculate_vehicles_loads()
+        solution.calculate_routes_time_windows(instance)
+        solution.objective_function(instance)
+
+        return solution

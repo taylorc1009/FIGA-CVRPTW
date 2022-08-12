@@ -57,6 +57,17 @@ if __name__ == '__main__':
                   f" - \"main.py Ombuki solomon_100/C101.txt MMOEASA\"")
         else:
             print("Argument \"-h\"/\"--help\" does not take any arguments")
+    elif sys.argv[1] in {"--validate", "-v"}:
+        if argc == 4 and sys.argv[2] == "FIGA":
+            solution = FIGASolution.is_valid(sys.argv[3])
+            print(
+                f"{solution.feasible=}{os.linesep}{os.linesep}"
+                f"{solution.total_distance=}{os.linesep}"
+                f"{solution.num_vehicles=}{os.linesep}{os.linesep}"
+                f"{str(solution)}"
+            )
+        else:
+            print("Inadequate amount of parameters; missing either the algorithm or the file name containing the solution to validate. Only FIGA is currently supported. Example command: \"main.py -v FIGA FIGASolution.csv\"")
     else:
         if sys.argv[1].upper() == "FIGA":
             if argc == 3:

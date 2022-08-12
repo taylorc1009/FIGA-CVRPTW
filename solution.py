@@ -2,7 +2,7 @@ from typing import List
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from constants import INT_MAX
-from abc import ABC, abstractmethod
+from abc import ABC, abstractclassmethod, abstractmethod
 
 class Solution(ABC):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, rank: int=INT_MAX, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0) -> None:
@@ -45,4 +45,8 @@ class Solution(ABC):
 
     @abstractmethod
     def objective_function(self, instance: ProblemInstance) -> None:
+        ...
+
+    @abstractclassmethod
+    def is_valid(self, instance: ProblemInstance, file: str) -> bool:
         ...

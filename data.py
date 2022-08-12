@@ -1,12 +1,10 @@
 import re
 import json
 from pathlib import Path
-from typing import Union
-from FIGA.figaSolution import FIGASolution
-from Ombuki.ombukiSolution import OmbukiSolution
 from node import Node
 from problemInstance import ProblemInstance
 from MMOEASA.mmoeasaSolution import MMOEASASolution
+from solution import Solution
 
 def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: str) -> ProblemInstance:
     try:
@@ -47,7 +45,7 @@ def MMOEASA_write_solution_for_validation(solution: MMOEASASolution, max_capacit
                 node = destination.node
                 csv.write(f"{node.number},{node.x},{node.y},{node.demand},{node.ready_time},{node.due_date},{node.service_duration}\n")
 
-def write_solution_for_graph(solution: Union[MMOEASASolution, OmbukiSolution, FIGASolution]) -> None:
+def write_solution_for_graph(solution: Solution) -> None:
     relative_path = str(Path(__file__).parent.resolve()) + "\\graph_solution.csv"
 
     with open(relative_path, "w+") as csv:
