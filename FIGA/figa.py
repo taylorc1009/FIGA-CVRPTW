@@ -8,8 +8,8 @@ from random import shuffle
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover
-from FIGA.parameters import CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST
+from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover, VE_mutation
+from FIGA.parameters import CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
 from vehicle import Vehicle
 from numpy import ceil, random
 
@@ -149,9 +149,9 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        probability = rand(2, 8)
+        mutator = rand(2, 9)
 
-        match probability:
+        match mutator:
             case 1:
                 mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 2:
@@ -165,13 +165,13 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 6:
                 mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
             case 7:
-                mutated_solution = LDHR_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+                mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
             case 8:
                 mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
             case 9:
-                mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
+                mutated_solution = VE_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
 
-        return mutated_solution, probability
+        return mutated_solution, mutator
     return solution, None
 
 def calculate_cooling(i: int, temperature_max: float, temperature_min: float, temperature_stop: float, population_size: int, termination_condition: int) -> float:
@@ -213,7 +213,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
     if is_nondominated(parent, child) and not duplicate:
         metropolis_returns[1] += 1
         return child
-    elif temperature <= temperature_stop:
+    elif temperature <= temperature_stop or not child.feasible:
         metropolis_returns[2] += 1
         return parent
     else:
@@ -263,7 +263,11 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             #     attempt_time_window_based_reorder(instance, solution)
 
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
-            child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_stop), mutation_probability)
+            child = mo_metropolis(instance, solution, child, solution.temperature, temperature_stop)
+            mutations = []
+            for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
+                child, mutator = try_mutation(instance, child, mutation_probability)
+                mutations.append(mutator)
 
             if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
                 population[s] = child
@@ -283,11 +287,12 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                         crossover_acceptances[crossover] = 1
                     else:
                         crossover_acceptances[crossover] += 1
-                if mutator:
-                    if not mutator in mutation_acceptances:
-                        mutation_acceptances[mutator] = 1
-                    else:
-                        mutation_acceptances[mutator] += 1
+                if mutations:
+                    for mutator in filter(lambda m: m, mutations):
+                        if not mutator in mutation_acceptances:
+                            mutation_acceptances[mutator] = 1
+                        else:
+                            mutation_acceptances[mutator] += 1
 
             population[s].temperature *= population[s].cooling_rate
         iterations += 1
