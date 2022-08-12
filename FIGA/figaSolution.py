@@ -13,7 +13,16 @@ class FIGASolution(Solution):
     def __str__(self) -> str:
         return f"total_distance={self.total_distance}, num_vehicles={self.num_vehicles}, {len(self.vehicles)=}, {[str(v) for v in sorted(self.vehicles, key=lambda v: v.destinations[1].node.number)]}"
 
+    def __nullify(self) -> None:
+        self.feasible = False
+        self.total_distance = float(INT_MAX)
+        self.num_vehicles = float(INT_MAX)
+
     def objective_function(self, instance: ProblemInstance) -> None:
+        if len(self.vehicles) > instance.amount_of_vehicles:
+            self.__nullify()
+            return
+        
         self.total_distance = 0.0
         self.num_vehicles = len(self.vehicles)
         self.feasible = True # set the solution as feasible temporarily
@@ -23,9 +32,7 @@ class FIGASolution(Solution):
 
             for destination in vehicle.get_customers_visited():
                 if destination.arrival_time > destination.node.due_date or vehicle.current_capacity > instance.capacity_of_vehicles:
-                    self.feasible = False
-                    self.total_distance = float(INT_MAX)
-                    self.num_vehicles = float(INT_MAX)
+                    self.__nullify()
                     return
 
     def __deepcopy__(self, memodict: Dict=None) -> "FIGASolution":
