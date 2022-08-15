@@ -129,7 +129,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        probability = rand(1, 4)
+        probability = rand(1, 3)
 
         match probability:
             case 1:
@@ -149,7 +149,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(2, 8)
+        mutator = rand(3, 9)
 
         match mutator:
             case 1:
@@ -157,7 +157,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 2:
                 mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
             case 3:
-                mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
+                mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
             case 4:
                 mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
             case 5:
@@ -168,8 +168,9 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
                 mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
             case 8:
                 mutated_solution = VE_mutation(instance, mutated_solution) # Arrival-Time-based Reorder Mutator
-        """case 5:
-            mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator"""
+            case 9:
+                mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
+
         return mutated_solution, mutator
     return solution, None
 
@@ -222,8 +223,8 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         # if the deterioration is low, there is a better chance that the Metropolis function will accept the child solution
         d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
-        mantissa_length = len(str(temperature).split(".")[0])
-        d_pt_pt = d_df / temperature ** (2 if not duplicate else (temperature_max / 10 ** mantissa_length) - (temperature / 10 ** mantissa_length))
+        # the new calculation in the "else" clause reduces the probability of accepting duplicate solutions from being recorded at a low temperature, and vice versa for high temperatures
+        d_pt_pt = d_df / temperature ** (2 if not duplicate else (temperature / 10 ** len(str(temperature).split(".")[0])) / 2)
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
