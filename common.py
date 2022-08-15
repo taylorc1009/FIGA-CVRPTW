@@ -3,7 +3,6 @@ from typing import Deque, List, Set, Tuple
 from numpy import random
 from constants import INT_MAX
 from solution import Solution
-from itertools import takewhile
 
 def rand(start: int, end: int, exclude_values: Set[int]=None) -> int:
     # '+ 1' to make the random number generator inclusive of the "end" value
@@ -21,7 +20,7 @@ def evaluate_similarity(solution_one: Solution, solution_two: Solution) -> Tuple
     s_one, s_two = [d.node.number for v in sorted(solution_one.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()], [d.node.number for v in sorted(solution_two.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()]
     if s_one == s_two:
         return True, 100.0
-    return False, round(sum(1 for _ in takewhile(lambda n: n == s_two[0], s_one)) / len(s_one) * 100, 3)
+    return False, (sum(1 if n == s_two[i] else 0 for i, n in enumerate(s_one)) / len(s_one)) * 100
 
 def evaluate_population(population: List[Solution]) -> Tuple[int, float]:
     similarities = []
@@ -36,7 +35,7 @@ def evaluate_population(population: List[Solution]) -> Tuple[int, float]:
                 unique_solutions.add(s)
                 if s == len(population) - 2:
                     unique_solutions.add(s_aux)
-    return len(unique_solutions), sum(similarities) / len(similarities)
+    return len(unique_solutions), round(sum(similarities) / len(similarities), 3)
 
 def check_seconds_termination_condition(start: float, termination_condition: int, nondominated_set_length: int, population: List[Solution], progress_indication_steps: Deque[float]) -> bool:
     time_taken = process_time() - start
