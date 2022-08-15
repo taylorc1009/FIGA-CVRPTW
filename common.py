@@ -3,6 +3,7 @@ from typing import Deque, List, Set, Tuple
 from numpy import random
 from constants import INT_MAX
 from solution import Solution
+from difflib import SequenceMatcher
 
 def rand(start: int, end: int, exclude_values: Set[int]=None) -> int:
     # '+ 1' to make the random number generator inclusive of the "end" value
@@ -20,7 +21,7 @@ def evaluate_similarity(solution_one: Solution, solution_two: Solution) -> Tuple
     s_one, s_two = [d.node.number for v in sorted(solution_one.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()], [d.node.number for v in sorted(solution_two.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()]
     if s_one == s_two:
         return True, 100.0
-    return False, (sum(1 if n == s_two[i] else 0 for i, n in enumerate(s_one)) / len(s_one)) * 100
+    return False, SequenceMatcher(None, s_one, s_two).ratio() * 100.0 #(sum(1 if n == s_two[i] else 0 for i, n in enumerate(s_one)) / len(s_one)) * 100
 
 def evaluate_population(population: List[Solution]) -> Tuple[int, float]:
     similarities = []
