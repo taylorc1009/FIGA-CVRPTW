@@ -149,15 +149,17 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        probability = rand(1, 4)
+        crossover = rand(1, 5)
 
-        match probability:
-            case 1:
+        match crossover:
+            case 1 | 2:
+                crossover = 1
                 crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(rand(1, CROSSOVER_MAX_VEHICLES), len(parent_two.vehicles) - 1)))
             case _: # this crossover has a higher chance of occurring
+                crossover = 2
                 crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
 
-        return crossover_solution, probability
+        return crossover_solution, crossover
     return parent_one, None
 
 def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
@@ -257,12 +259,14 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
 
     global initialiser_execution_time, feasible_initialisations, mutation_acceptances, crossover_acceptances
     initialiser_execution_time = process_time()
+    half_population_size = round(population_size / 2)
     for i in range(0, population_size):
-        population.insert(i, DTWIH(instance, i) if i < round(population_size / 2) else DTWIH_II(instance, i))
+        population.insert(i, DTWIH(instance, i) if i < half_population_size else DTWIH_II(instance, i))
         population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
             feasible_initialisations += 1
+    del half_population_size
     initialiser_execution_time = round((process_time() - initialiser_execution_time) * 1000, 3)
 
     start = process_time()
@@ -295,8 +299,6 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                     print(nds_str)
 
                 if crossover:
-                    if crossover != 1:
-                        crossover = 2
                     if not crossover in crossover_acceptances:
                         crossover_acceptances[crossover] = 1
                     else:

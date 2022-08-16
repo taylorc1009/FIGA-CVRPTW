@@ -1,7 +1,7 @@
 import copy
 from random import shuffle
 from typing import List, Set, Tuple
-from FIGA.parameters import MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_SHORT_ROUTE_PROBABILITY
+from FIGA.parameters import MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
@@ -414,7 +414,7 @@ def select_short_route(solution: FIGASolution) -> int:
 
 def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Vehicle Elimination Mutator
     # select a random vehicle and try to move all of its destinations into feasible positions in other vehicles; destinations that cannot be moved will remain in the original randomly selected vehicle
-    random_origin_vehicle = select_short_route(solution) if rand(1, 100) < MUTATION_SHORT_ROUTE_PROBABILITY else select_random_vehicle(solution)
+    random_origin_vehicle = select_short_route(solution) if rand(1, 100) < MUTATION_ELIMINATE_SHORTEST_PROBABILITY else select_random_vehicle(solution)
 
     infeasible_node_reallocations = 0
     for _ in range(1, solution.vehicles[random_origin_vehicle].get_num_of_customers_visited() + 1):
