@@ -153,7 +153,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
 
         match probability:
             case 1:
-                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1)))
+                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(rand(1, CROSSOVER_MAX_VEHICLES), len(parent_two.vehicles) - 1)))
             case _: # this crossover has a higher chance of occurring
                 crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
 
