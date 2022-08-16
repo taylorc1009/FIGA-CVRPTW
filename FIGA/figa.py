@@ -4,7 +4,7 @@ from time import process_time
 from typing import Deque, List, Dict, Tuple, Union
 from constants import INT_MAX
 from common import rand, check_are_identical, check_iterations_termination_condition, check_seconds_termination_condition
-from random import shuffle
+from random import shuffle, sample
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
@@ -64,6 +64,48 @@ def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
 
     return solution
 
+def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
+    sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
+    range_of_sorted_nodes = int(ceil(len(instance.nodes) / 10))
+    solution = FIGASolution(_id=_id)
+
+    while sorted_nodes:
+        shuffle_buffer_size = min(range_of_sorted_nodes, len(sorted_nodes)) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
+        shuffled_nodes_buffer = sorted_nodes[:shuffle_buffer_size] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
+        shuffle(shuffled_nodes_buffer)
+        for i in range(shuffle_buffer_size):
+            inserted = False
+            for v, vehicle in enumerate(solution.vehicles):
+                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + shuffled_nodes_buffer[i].demand > instance.capacity_of_vehicles:
+                    continue
+                previous_destination = vehicle.get_customers_visited()[-1]
+                new_destination = Destination(node=shuffled_nodes_buffer[i])
+                new_destination.arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, new_destination.node.number)
+                if new_destination.arrival_time > new_destination.node.due_date:
+                    continue
+                if new_destination.arrival_time < new_destination.node.ready_time: # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
+                    new_destination.wait_time = new_destination.node.ready_time - new_destination.arrival_time
+                    new_destination.arrival_time = new_destination.node.ready_time
+                else:
+                    new_destination.wait_time = 0.0
+                new_destination.departure_time = new_destination.arrival_time + new_destination.node.service_duration
+                vehicle.destinations.insert(len(vehicle.destinations) - 1, new_destination)
+                vehicle.current_capacity += new_destination.node.demand
+                vehicle.calculate_destination_time_window(instance, -2, -1)
+                inserted = v, True
+                break
+            if not inserted:
+                solution.vehicles.append(Vehicle.create_route(instance, shuffled_nodes_buffer[i]))
+                solution.vehicles[-1].calculate_destinations_time_windows(instance)
+                solution.vehicles[-1].calculate_vehicle_load()
+        del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
+
+    solution.calculate_routes_time_windows(instance)
+    solution.calculate_length_of_routes(instance)
+    solution.objective_function(instance)
+
+    return solution
+
 def is_nondominated(old_solution: FIGASolution, new_solution: FIGASolution) -> bool:
     return (new_solution.total_distance < old_solution.total_distance and new_solution.num_vehicles <= old_solution.num_vehicles) or (new_solution.total_distance <= old_solution.total_distance and new_solution.num_vehicles < old_solution.num_vehicles)
 
@@ -94,28 +136,6 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                 del nondominated_set[i if i < 20 else 20:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
                 return process_time() if subject_solution in nondominated_set else None
 
-"""def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
-    i = 0
-
-    while i < len(solution.vehicles) and len(solution.vehicles) < instance.amount_of_vehicles:
-        for j, destination in enumerate(solution.vehicles[i].get_customers_visited(), 1):
-            if destination.arrival_time > destination.node.due_date:
-                solution.vehicles.insert(i + 1, Vehicle.create_route(instance, solution.vehicles[i].destinations[j:-1]))
-                del solution.vehicles[i].destinations[j:-1]
-
-                solution.vehicles[i].calculate_vehicle_load()
-                solution.vehicles[i].calculate_length_of_route(instance)
-                solution.vehicles[i].calculate_destination_time_window(instance, j - 1, j)
-
-                solution.vehicles[i + 1].calculate_vehicle_load()
-                solution.vehicles[i + 1].calculate_length_of_route(instance)
-                solution.vehicles[i + 1].calculate_destinations_time_windows(instance)
-
-                break
-        i += 1
-
-    solution.objective_function(instance)"""
-
 def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None) -> FIGASolution:
     if exclude_solution:
         # if the non-dominated set isn't empty, and contains at least two solutions or one solution that is not "exclude_solution", then it is possible to use the non-dominated set
@@ -129,16 +149,13 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        probability = rand(1, 3)
+        probability = rand(1, 4)
 
         match probability:
             case 1:
+                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1)))
+            case _: # this crossover has a higher chance of occurring
                 crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
-            case _: # crossover two has a higher chance of occurring
-                vehicles_to_crossover = []
-                for _ in range(rand(1, min(CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))): # the "min" function prevents an infinite loop that occurs when CROSSOVER_MAX_VEHICLES is larger than the number of vehicles in parent_two
-                    vehicles_to_crossover.append(rand(0, len(parent_two.vehicles) - 1, exclude_values=set(vehicles_to_crossover)))
-                crossover_solution = ES_crossover(instance, parent_one, [parent_two.vehicles[r] for r in vehicles_to_crossover])
 
         return crossover_solution, probability
     return parent_one, None
@@ -224,7 +241,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
         # the new calculation in the "else" clause reduces the probability of accepting duplicate solutions from being recorded at a low temperature, and vice versa for high temperatures
-        d_pt_pt = d_df / temperature ** (2 if not duplicate else (temperature / 10 ** len(str(temperature).split(".")[0])) / 2)
+        d_pt_pt = d_df / temperature ** (2 if not duplicate else (temperature / 10 ** len(str(temperature_stop).split(".")[0]) - 1))
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
@@ -241,7 +258,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     global initialiser_execution_time, feasible_initialisations, mutation_acceptances, crossover_acceptances
     initialiser_execution_time = process_time()
     for i in range(0, population_size):
-        population.insert(i, DTWIH(instance, i))
+        population.insert(i, DTWIH(instance, i) if i < round(population_size / 2) else DTWIH_II(instance, i))
         population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
@@ -260,14 +277,10 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         crossover_parent_two = selection_tournament(nondominated_set, population)
 
         for s, solution in enumerate(population):
-            # if not solution.feasible:
-            #     attempt_time_window_based_reorder(instance, solution)
-
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
-            child = mo_metropolis(instance, solution, child, solution.temperature, temperature_stop)
             mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                child, mutator = try_mutation(instance, child, mutation_probability)
+                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_stop), mutation_probability)
                 mutations.append(mutator)
 
             if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
@@ -277,8 +290,8 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                 if nds_update:
                     last_nds_update = nds_update - start
                     nds_str = ""
-                    for s, solution in enumerate(nondominated_set):
-                        nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s < len(nondominated_set) - 1 else "")
+                    for s_aux, solution in enumerate(nondominated_set):
+                        nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s_aux < len(nondominated_set) - 1 else "")
                     print(nds_str)
 
                 if crossover:
