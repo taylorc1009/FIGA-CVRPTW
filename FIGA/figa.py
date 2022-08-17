@@ -154,10 +154,10 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         match crossover:
             case 1 | 2:
                 crossover = 1
-                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(rand(1, CROSSOVER_MAX_VEHICLES), len(parent_two.vehicles) - 1)))
+                crossover_solution = SBCR_crossover(instance, parent_one, random.choice(parent_two.vehicles))
             case _: # this crossover has a higher chance of occurring
                 crossover = 2
-                crossover_solution = SBCR_crossover(instance, parent_one, parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)])
+                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(rand(1, CROSSOVER_MAX_VEHICLES), len(parent_two.vehicles) - 1)))
 
         return crossover_solution, crossover
     return parent_one, None
@@ -184,7 +184,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 6:
                 mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
             case 7:
-                mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+                mutated_solution = ATBR_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
             case 8:
                 mutated_solution = VE_mutation(instance, mutated_solution) # Vehicle Elimination Mutator
             case 9:

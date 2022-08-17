@@ -47,10 +47,11 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
     for d in randomized_destinations:
         parent_destination = parent_two_vehicle.destinations[d]
         best_vehicle, best_position = (None,) * 2
-        #best_vehicle_by_time, best_position_by_time = (None,) * 2
+        # best_vehicle_by_distance, best_position_by_distance = (None,) * 2
+        # best_vehicle_by_time, best_position_by_time = (None,) * 2
         shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
         highest_wait_time = 0.0
-        #lowest_ready_time_difference = float(INT_MAX)
+        # lowest_ready_time_difference = float(INT_MAX)
         found_feasible_location = False
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
@@ -70,18 +71,19 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
                     if not (simulated_arrival_time > parent_destination.node.due_date or simulated_departure_time + distance_to_next > vehicle.destinations[j].node.due_date) \
                         and ((distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next)):
                             best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
-                        # if abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous)) < lowest_ready_time_difference:
-                        #     best_vehicle_by_time, best_position_by_time, lowest_ready_time_difference = i, j, abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous)
+                        # ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
+                        # if ready_time_difference < lowest_ready_time_difference:
+                        #     best_vehicle_by_time, best_position_by_time, lowest_ready_time_difference = i, j, ready_time_difference
                             found_feasible_location = True
                     elif not found_feasible_location and crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time:
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
-                        best_vehicle_by_time, best_position_by_time, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
+                        best_vehicle, best_position, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
 
         # best_vehicle, best_position = (best_vehicle_by_time, best_position_by_time) \
         #     if not (best_vehicle_by_distance is not None and best_position_by_distance is not None) or (rand(0, 1) and best_vehicle_by_time is not None and best_position_by_time is not None) \
         #     else (best_vehicle_by_distance, best_position_by_distance)
 
-        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles:# and best_vehicle is None:
+        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and best_vehicle is None:
             best_vehicle = len(crossover_solution.vehicles)
             crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
         else:
@@ -99,7 +101,7 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
 def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Eliminate and Substitute Crossover
     crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
 
-    crossover_solution.vehicles += parent_two_vehicles
+    crossover_solution.vehicles += [copy.deepcopy(vehicle) for vehicle in parent_two_vehicles]
 
     crossover_solution.calculate_length_of_routes(instance)
     crossover_solution.objective_function(instance)
@@ -336,12 +338,16 @@ def find_time_window_threatened_position(solution: FIGASolution) -> Tuple[int, i
     worst_route, worst_position, riskiest_difference = None, None, INT_MAX
 
     # find an infeasible route; if none are infeasible, select the destination with the smallest difference between its arrival time and its due date
-    for v, vehicle in enumerate(solution.vehicles):
-        for d, destination in enumerate(vehicle.get_customers_visited(), 1):
-            if destination.arrival_time > destination.node.due_date:
-                return v, d # any infeasible destination is bad, so return any
-            elif destination.node.due_date - destination.arrival_time < riskiest_difference: # the difference (minus calculation) will never be negative if the arrival time is not greater than the due date
-                worst_route, worst_position, riskiest_difference = v, d, destination.node.due_date - destination.arrival_time
+    if rand(1, 100) < 20:
+        for v, vehicle in enumerate(solution.vehicles):
+            for d, destination in enumerate(vehicle.get_customers_visited(), 1):
+                if destination.arrival_time > destination.node.due_date:
+                    return v, d # any infeasible destination is bad, so return any
+                elif destination.node.due_date - destination.arrival_time < riskiest_difference: # the difference (minus calculation) will never be negative if the arrival time is not greater than the due date
+                    worst_route, worst_position, riskiest_difference = v, d, destination.node.due_date - destination.arrival_time
+    else:
+        worst_route = select_random_vehicle(solution, customers_required=1)
+        worst_position = rand(1, solution.vehicles[worst_route].get_num_of_customers_visited())
 
     return worst_route, worst_position
 
@@ -375,8 +381,7 @@ def try_feasible_swap(instance: ProblemInstance, solution: FIGASolution, first_v
             if second_vehicle is not first_vehicle:
                 for d2, destination_two in enumerate(second_vehicle.get_customers_visited(), 1):
                     first_arrival_time, second_arrival_time = first_vehicle.destinations[d1 - 1].departure_time + instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, destination_two.node.number), second_vehicle.destinations[d2 - 1].departure_time + instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, destination_one.node.number)
-                    if first_arrival_time <= destination_two.node.due_date \
-                        and second_arrival_time <= destination_one.node.due_date:
+                    if first_arrival_time <= destination_two.node.due_date and second_arrival_time <= destination_one.node.due_date:
                         if abs(destination_two.node.ready_time - first_arrival_time) < abs(destination_two.node.ready_time - destination_two.arrival_time) \
                             and abs(destination_one.node.ready_time - second_arrival_time) < abs(destination_one.node.ready_time - destination_one.arrival_time) \
                             and rand(1, 100) < MUTATION_SWAP_PROBABILITY:
@@ -399,7 +404,7 @@ def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
     first_vehicle_index = select_random_vehicle(solution, customers_required=1)
     first_vehicle = solution.vehicles[first_vehicle_index]
 
-    for _ in range(min(first_vehicle.get_num_of_customers_visited(), rand(1, MUTATION_MAX_FEASIBLE_SWAPS))):
+    for _ in range(rand(1, MUTATION_MAX_FEASIBLE_SWAPS)):
         try_feasible_swap(instance, solution, first_vehicle)
 
     return solution
@@ -428,20 +433,24 @@ def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
                     solution.vehicles[destination_vehicle].destinations.insert(destination_position, solution.vehicles[random_origin_vehicle].destinations.pop(origin_position))
                     solution.vehicles[destination_vehicle].current_capacity += solution.vehicles[destination_vehicle].destinations[destination_position].node.demand
                     solution.vehicles[destination_vehicle].calculate_length_of_route(instance)
-                    solution.vehicles[destination_vehicle].calculate_destinations_time_windows(instance)
+                    for d in range(destination_position, len(solution.vehicles[destination_vehicle].destinations)):
+                        solution.vehicles[destination_vehicle].calculate_destination_time_window(instance, d - 1, d)
                     solution.vehicles[random_origin_vehicle].current_capacity -= solution.vehicles[destination_vehicle].destinations[destination_position].node.demand
                     solution.vehicles[random_origin_vehicle].calculate_length_of_route(instance)
-                    solution.vehicles[random_origin_vehicle].calculate_destinations_time_windows(instance)
+                    for d in range(origin_position, len(solution.vehicles[random_origin_vehicle].destinations)):
+                        solution.vehicles[random_origin_vehicle].calculate_destination_time_window(instance, d - 1, d)
                     solution.objective_function(instance)
 
                     if not solution.feasible:
                         solution.vehicles[random_origin_vehicle].destinations.insert(origin_position, solution.vehicles[destination_vehicle].destinations.pop(destination_position))
                         solution.vehicles[random_origin_vehicle].current_capacity += solution.vehicles[random_origin_vehicle].destinations[origin_position].node.demand
                         solution.vehicles[random_origin_vehicle].calculate_length_of_route(instance)
-                        solution.vehicles[random_origin_vehicle].calculate_destinations_time_windows(instance)
+                        for d in range(origin_position, len(solution.vehicles[random_origin_vehicle].destinations)):
+                            solution.vehicles[random_origin_vehicle].calculate_destination_time_window(instance, d - 1, d)
                         solution.vehicles[destination_vehicle].current_capacity -= solution.vehicles[random_origin_vehicle].destinations[origin_position].node.demand
                         solution.vehicles[destination_vehicle].calculate_length_of_route(instance)
-                        solution.vehicles[destination_vehicle].calculate_destinations_time_windows(instance)
+                        for d in range(destination_position, len(solution.vehicles[destination_vehicle].destinations)):
+                            solution.vehicles[destination_vehicle].calculate_destination_time_window(instance, d - 1, d)
                         solution.objective_function(instance)
                     else:
                         node_reallocated = True
