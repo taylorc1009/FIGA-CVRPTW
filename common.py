@@ -1,4 +1,6 @@
+from threading import Thread
 from time import process_time
+import timeit
 from typing import Deque, List, Set, Tuple
 from numpy import random
 from constants import INT_MAX
@@ -38,17 +40,23 @@ def evaluate_population(population: List[Solution]) -> Tuple[int, float]:
                     unique_solutions.add(s_aux)
     return len(unique_solutions), round(sum(similarities) / len(similarities), 3)
 
+def output_status_seconds(nondominated_set_length: int, population: List[Solution], progress_indication_steps: Deque[float], time_taken: float) -> None:
+    progress_indication_steps.popleft()
+    unique_solutions, average_similarity = evaluate_population(population)
+    print(f"time_taken={round(time_taken, 1)}s, {nondominated_set_length=}, {unique_solutions=}, {average_similarity=}%")
+
 def check_seconds_termination_condition(start: float, termination_condition: int, nondominated_set_length: int, population: List[Solution], progress_indication_steps: Deque[float]) -> bool:
     time_taken = process_time() - start
     if progress_indication_steps and time_taken >= progress_indication_steps[0]:
-        progress_indication_steps.popleft()
-        unique_solutions, average_similarity = evaluate_population(population)
-        print(f"time_taken={round(time_taken, 1)}s, {nondominated_set_length=}, {unique_solutions=}, {average_similarity=}%")
+        Thread(target=output_status_seconds, args=(nondominated_set_length, population, progress_indication_steps, time_taken)).start()
     return not time_taken < termination_condition
+
+def output_status_iterations(nondominated_set_length: int, population: List[Solution], progress_indication_steps: Deque[float], iterations: int) -> None:
+    progress_indication_steps.popleft()
+    unique_solutions, average_similarity = evaluate_population(population)
+    print(f"{iterations=}, {nondominated_set_length=}, {unique_solutions=}, {average_similarity=}%")
 
 def check_iterations_termination_condition(iterations: int, termination_condition: int, nondominated_set_length: int, population: List[Solution], progress_indication_steps: Deque[float]) -> bool:
     if progress_indication_steps and iterations >= progress_indication_steps[0]:
-        progress_indication_steps.popleft()
-        unique_solutions, average_similarity = evaluate_population(population)
-        print(f"{iterations=}, {nondominated_set_length=}, {unique_solutions=}, {average_similarity=}%")
+        Thread(target=output_status_iterations, args=(nondominated_set_length, population, progress_indication_steps, iterations)).start()
     return not iterations < termination_condition
