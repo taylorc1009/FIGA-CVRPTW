@@ -311,7 +311,7 @@ def TWBPB_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASol
 
 def TWBLC_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Local Crossover Mutator
     origin_vehicle_index = select_random_vehicle(solution)
-    origin_vehicle, destination_vehicle = solution.vehicles[origin_vehicle_index], solution.vehicles[select_random_vehicle(solution, exclude_values=origin_vehicle_index)]
+    origin_vehicle, destination_vehicle = solution.vehicles[origin_vehicle_index], solution.vehicles[select_random_vehicle(solution, exclude_values=set({origin_vehicle_index}))]
 
     best_position = None # will always be given a value as it's practically impossible to arrive at every destination exactly when their time windows open
     best_ready_time_difference = INT_MAX # the best position would have a very small difference between the arrival time and the destination's ready_time
@@ -319,7 +319,8 @@ def TWBLC_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASol
     # best point from one vehicle would be where the arrival time is nearest a destination's ready_time
     for destination_to_move in origin_vehicle.get_customers_visited():
         for d, destination in enumerate(destination_vehicle.get_customers_visited(), 1): # don't start from the leave-depot node (0) as then we would just be swapping the entire route (instead of crossing it over) if that point is the best fit
-            arrival_time, ready_time_difference = destination.departure_time + instance.get_distance(destination.node.number, destination_to_move.node.number), abs(destination_to_move.node.ready_time - arrival_time)
+            arrival_time = destination.departure_time + instance.get_distance(destination.node.number, destination_to_move.node.number)
+            ready_time_difference = abs(destination_to_move.node.ready_time - arrival_time)
             if arrival_time <= destination_to_move.node.due_date and ready_time_difference < best_ready_time_difference:
                 #if ready_time_difference >= best_ready_time_difference: # for performance: theoretically, when the best point has been found, the difference of the current iteration will be higher the difference of the best 
                 #    break
