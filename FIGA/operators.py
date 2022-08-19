@@ -7,6 +7,7 @@ from constants import INT_MAX
 from common import rand
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
+from random import choice
 
 def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution:
     child_solution = copy.deepcopy(parent_one)
@@ -49,10 +50,11 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
         best_vehicle, best_position = (None,) * 2
         # best_vehicle_by_distance, best_position_by_distance = (None,) * 2
         # best_vehicle_by_time, best_position_by_time = (None,) * 2
-        shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
+        # shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
         highest_wait_time = 0.0
-        # lowest_ready_time_difference = float(INT_MAX)
-        found_feasible_location = False
+        lowest_ready_time_difference = float(INT_MAX)
+        # found_feasible_location = False
+        feasible_locations = []
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
             if not vehicle.current_capacity + parent_destination.node.demand > instance.capacity_of_vehicles:
@@ -68,22 +70,26 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
                     simulated_departure_time = simulated_arrival_time + parent_destination.node.service_duration
 
                     # if, based on the simulated arrival and departure times, insertion does not violate time window constraints and the distance from the nodes at j - 1 and j is less than any that's been found, then record this as the best position
-                    if not (simulated_arrival_time > parent_destination.node.due_date or simulated_departure_time + distance_to_next > vehicle.destinations[j].node.due_date) \
-                        and ((distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next)):
-                            best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
+                    if not (simulated_arrival_time > parent_destination.node.due_date or simulated_departure_time + distance_to_next > vehicle.destinations[j].node.due_date):
+                        # best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
+                        # found_feasible_location = True
+                        feasible_locations.append((i, j))
                         # ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
                         # if ready_time_difference < lowest_ready_time_difference:
                         #     best_vehicle_by_time, best_position_by_time, lowest_ready_time_difference = i, j, ready_time_difference
-                            found_feasible_location = True
-                    elif not found_feasible_location and crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time:
+                    elif not feasible_locations:
+                        ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
+                        if crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time and ready_time_difference < lowest_ready_time_difference:
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
-                        best_vehicle, best_position, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
+                            best_vehicle, best_position, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
 
         # best_vehicle, best_position = (best_vehicle_by_time, best_position_by_time) \
         #     if not (best_vehicle_by_distance is not None and best_position_by_distance is not None) or (rand(0, 1) and best_vehicle_by_time is not None and best_position_by_time is not None) \
         #     else (best_vehicle_by_distance, best_position_by_distance)
 
-        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and best_vehicle is None:
+        if feasible_locations:
+            best_vehicle, best_position = choice(feasible_locations)
+        if not feasible_locations and len(crossover_solution.vehicles) < instance.amount_of_vehicles and best_vehicle is None:
             best_vehicle = len(crossover_solution.vehicles)
             crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
         else:

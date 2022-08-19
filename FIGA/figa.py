@@ -12,6 +12,7 @@ from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, TWBLC_mut
 from FIGA.parameters import CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
 from vehicle import Vehicle
 from numpy import ceil, random
+from FIGA.archive.mutation import MMOEASA_mutation3, MMOEASA_mutation5
 
 # operators' statistics
 initialiser_execution_time: int=0
@@ -154,10 +155,10 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         match crossover:
             case 1 | 2:
                 crossover = 1
-                crossover_solution = SBCR_crossover(instance, parent_one, random.choice(parent_two.vehicles))
+                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(rand(1, CROSSOVER_MAX_VEHICLES), len(parent_two.vehicles) - 1)))
             case _: # this crossover has a higher chance of occurring
                 crossover = 2
-                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, min(rand(1, CROSSOVER_MAX_VEHICLES), len(parent_two.vehicles) - 1)))
+                crossover_solution = SBCR_crossover(instance, parent_one, random.choice(parent_two.vehicles))
 
         return crossover_solution, crossover
     return parent_one, None
@@ -168,7 +169,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(3, 9)
+        mutator = rand(6, 9)
 
         match mutator:
             case 1:
@@ -184,11 +185,17 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 6:
                 mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
             case 7:
-                mutated_solution = ATBR_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+                mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
             case 8:
                 mutated_solution = VE_mutation(instance, mutated_solution) # Vehicle Elimination Mutator
             case 9:
                 mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
+            case 10:
+                mutated_solution = MMOEASA_mutation3(instance, mutated_solution)
+            case 11:
+                mutated_solution = MMOEASA_mutation5(instance, mutated_solution)
+            case 12:
+                mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time Based Reorder Mutator
 
         return mutated_solution, mutator
     return solution, None
@@ -232,7 +239,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
     if is_nondominated(parent, child) and not duplicate:
         metropolis_returns[1] += 1
         return child
-    elif temperature <= temperature_stop or not child.feasible:
+    elif temperature < 0.0001:
         metropolis_returns[2] += 1
         return parent
     else:
