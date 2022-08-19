@@ -456,6 +456,9 @@ def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
 
     if origin_position == 1:
         del solution.vehicles[solution.vehicles.index(random_origin_vehicle)] # this ".index()" is necessary because "try_feasible_reallocation" shuffles the list, so the index needs to be acquired after the list is shuffled
+    elif random_origin_vehicle.get_num_of_customers_visited() != original_length:
+        random_origin_vehicle.calculate_destinations_time_windows(instance)
+        random_origin_vehicle.calculate_vehicle_load()
 
     solution.calculate_length_of_routes(instance)
     solution.objective_function(instance)
