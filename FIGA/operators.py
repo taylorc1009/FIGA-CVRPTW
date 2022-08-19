@@ -40,13 +40,12 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, 
 
     return child_solution
 
-def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicle: Vehicle) -> FIGASolution: # Single-child Best Cost Route Crossover
-    crossover_solution = set_up_crossover_child(instance, parent_one, [parent_two_vehicle])
+def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Single-child Best Cost Route Crossover
+    crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
 
-    randomized_destinations = list(range(1, len(parent_two_vehicle.destinations) - 1))
+    randomized_destinations = [destination for vehicle in parent_two_vehicles for destination in vehicle.get_customers_visited()]
     shuffle(randomized_destinations)
-    for d in randomized_destinations:
-        parent_destination = parent_two_vehicle.destinations[d]
+    for parent_destination in randomized_destinations:
         best_vehicle, best_position = (None,) * 2
         # best_vehicle_by_distance, best_position_by_distance = (None,) * 2
         # best_vehicle_by_time, best_position_by_time = (None,) * 2
