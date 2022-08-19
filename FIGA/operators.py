@@ -418,9 +418,7 @@ def select_short_route(solution: FIGASolution) -> int:
     vehicles = sorted(range(len(solution.vehicles)), key=lambda v: solution.vehicles[v].get_num_of_customers_visited())
 
     boundary = min(3, round(len(vehicles) / 2))
-    for i, v in enumerate(vehicles[:boundary]):
-        if rand(1, 100) < 50 or i == boundary - 1:
-            return v
+    return choice(vehicles[:boundary])
 
 def try_feasible_reallocation(instance: ProblemInstance, solution: FIGASolution, random_origin_vehicle: Vehicle, origin_position: int):
     shuffle(solution.vehicles)
