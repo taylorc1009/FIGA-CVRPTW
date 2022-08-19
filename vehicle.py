@@ -50,7 +50,7 @@ class Vehicle:
                 if isinstance(node[0], Node):
                     return cls(destinations=[Destination(node=instance.nodes[0]), *[Destination(node=n) for n in node], Destination(instance.nodes[0])])
                 elif isinstance(node[0], Destination):
-                    return cls(destinations=[Destination(node=instance.nodes[0]), *node, Destination(node=instance.nodes[0])])
+                    return cls(destinations=[Destination(node=instance.nodes[0]), *[Destination(node=d.node) for d in node], Destination(node=instance.nodes[0])])
             elif isinstance(node, Node):
                 return cls(destinations=[Destination(node=instance.nodes[0]), Destination(node=node), Destination(instance.nodes[0])])
             elif isinstance(node, Destination):
