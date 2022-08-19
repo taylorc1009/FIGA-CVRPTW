@@ -55,7 +55,7 @@ class FIGASolution(Solution):
                 instance = open_problem_instance("FIGA", problem_path, "OMBUKI")
                 for line in file:
                     cur_line = line.split()[0]
-                    solution.vehicles.append(Vehicle.create_route(instance, [Destination(node=instance.nodes[int(n)]) for n in cur_line.split(',')]))
+                    solution.vehicles.append(Vehicle.create_route(instance, [instance.nodes[int(n)] for n in cur_line.split(',')]))
         except FileNotFoundError as e:
             exc = FileNotFoundError(f"Couldn't open file \"{filename}\"\nCause: {e}")
             raise exc from None
