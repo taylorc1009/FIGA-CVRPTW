@@ -1,5 +1,5 @@
 import copy
-from math import exp, sqrt
+from math import exp, sqrt, log
 from time import process_time
 from typing import Deque, List, Dict, Tuple, Union
 from constants import INT_MAX
@@ -8,8 +8,8 @@ from random import shuffle, sample
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover, VE_mutation
-from FIGA.parameters import ES_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
+from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, FBR_crossover, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover, VE_mutation
+from FIGA.parameters import ES_CROSSOVER_MAX_VEHICLES, FBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
 from vehicle import Vehicle
 from numpy import ceil, random
 from FIGA.archive.mutation import MMOEASA_mutation3, MMOEASA_mutation5
@@ -117,25 +117,24 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
     nondominated_set.append(subject_solution) # append the new solution to the non-dominated set; it will either remain or be removed by this procedure, depending on whether it dominates or not
     solutions_to_remove = set()
 
-    if len(nondominated_set) > 1:
-        for s, solution in enumerate(nondominated_set[:-1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
-            for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
-                # we need to check if both solutions dominate one another; s may not dominate s_aux, but s_aux may dominate s, and if neither dominate each other, then they still remain in the non-dominated set
-                if is_nondominated(solution, solution_auxiliary):
-                    solutions_to_remove.add(s)
-                elif is_nondominated(solution_auxiliary, solution) \
-                        or check_are_identical(solution, solution_auxiliary): # this "or" clause removes identical solutions, but it is not needed as "mo_metropolis" prevents duplicate solutions prior to this
-                    solutions_to_remove.add(s_aux)
+    for s, solution in enumerate(nondominated_set[:-1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
+        for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
+            # we need to check if both solutions dominate one another; s may not dominate s_aux, but s_aux may dominate s, and if neither dominate each other, then they still remain in the non-dominated set
+            if is_nondominated(solution, solution_auxiliary):
+                solutions_to_remove.add(s)
+            elif is_nondominated(solution_auxiliary, solution) \
+                    or check_are_identical(solution, solution_auxiliary): # this "or" clause removes identical solutions, but it is not needed as "mo_metropolis" prevents duplicate solutions prior to this
+                solutions_to_remove.add(s_aux)
 
-        if solutions_to_remove:
-            i = 0
-            for s in range(len(nondominated_set)):
-                if s not in solutions_to_remove:
-                    nondominated_set[i] = nondominated_set[s] # shift every solution whose list index is not in solutions_to_remove
-                    i += 1
-            if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
-                del nondominated_set[i if i < 20 else 20:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
-                return process_time() if subject_solution in nondominated_set else None
+    if solutions_to_remove:
+        i = 0
+        for s in range(len(nondominated_set)):
+            if s not in solutions_to_remove:
+                nondominated_set[i] = nondominated_set[s] # shift every solution whose list index is not in solutions_to_remove
+                i += 1
+        if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
+            del nondominated_set[i if i < 20 else 20:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
+            return process_time() if subject_solution in nondominated_set else None
 
 def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None) -> FIGASolution:
     if exclude_solution:
@@ -154,22 +153,23 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
 
         match crossover:
             case 1:
-                crossover = 1
                 crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(ES_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
+            case 2:
+                crossover_solution = FBR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(FBR_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
             case _: # this crossover has a higher chance of occurring
-                crossover = 2
+                crossover = 3
                 crossover_solution = SBCR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(SBRC_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
 
         return crossover_solution, crossover
     return parent_one, None
 
-def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
+def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int, temperature_min: float) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < mutation_probability:
         global mutation_invocations, mutation_acceptances
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(6, 9)
+        mutator = rand(1 if solution.temperature > temperature_min else 4, 9)
 
         match mutator:
             case 1:
@@ -179,13 +179,13 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 3:
                 mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 4:
-                mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
-            case 5:
-                mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
-            case 6:
-                mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
-            case 7:
                 mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+            case 5:
+                mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
+            case 6:
+                mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
+            case 7:
+                mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
             case 8:
                 mutated_solution = VE_mutation(instance, mutated_solution) # Vehicle Elimination Mutator
             case 9:
@@ -230,7 +230,7 @@ def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution
     x2, y2 = parent.total_distance, parent.num_vehicles
     return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
 
-def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, temperature_stop: float, population: List[FIGASolution]=None) -> FIGASolution:
+def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, temperature_max: float, temperature_stop: float, population: List[FIGASolution]=None) -> FIGASolution:
     global metropolis_returns
     if not population:
         population = []
@@ -250,7 +250,9 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
         # the new calculation in the "else" clause reduces the probability of accepting duplicate solutions from being recorded at a low temperature, and vice versa for high temperatures
-        d_pt_pt = d_df / temperature ** (2 if not duplicate else (temperature / 10 ** len(str(temperature_stop).split(".")[0]) - 1))
+        #mantissa_length = len(str(temperature_stop).split(".")[0]) - 1
+        #base = (temperature_max / 10 ** mantissa_length) - (temperature / 10 ** mantissa_length)
+        d_pt_pt = d_df / temperature ** 2#(2 if not duplicate else 2 + (log(base) if base else 0))
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
@@ -291,10 +293,10 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
             mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_stop), mutation_probability)
+                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_max, temperature_stop), mutation_probability, temperature_min)
                 mutations.append(mutator)
 
-            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
+            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_max, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
                 population[s] = child
 
                 nds_update = check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
