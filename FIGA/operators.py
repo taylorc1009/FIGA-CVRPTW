@@ -1,7 +1,7 @@
 import copy
 from random import shuffle
 from typing import List, Set, Tuple
-from FIGA.parameters import MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY, MUTATION_THREATENED_WINDOW_PROBABILITY
+from FIGA.parameters import MUTATION_FEASIBLE_SWAP_PROBABILITY, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY, MUTATION_THREATENED_WINDOW_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
@@ -438,9 +438,8 @@ def ATBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 
     return solution
 
-def try_feasible_swap(instance: ProblemInstance, solution: FIGASolution, first_vehicle_index: int) -> None:
+def try_feasible_swap(instance: ProblemInstance, solution: FIGASolution, first_vehicle: Vehicle, second_vehicle: Vehicle) -> None:
     # shuffle(solution.vehicles)
-    first_vehicle, second_vehicle = solution.vehicles[first_vehicle_index], solution.vehicles[select_random_vehicle(solution, customers_required=1, exclude_values=set({first_vehicle_index}))]
 
     for d1, destination_one in enumerate(first_vehicle.get_customers_visited(), 1):
         # for second_vehicle in solution.vehicles:
@@ -449,16 +448,20 @@ def try_feasible_swap(instance: ProblemInstance, solution: FIGASolution, first_v
             first_arrival_time, second_arrival_time = first_vehicle.destinations[d1 - 1].departure_time + instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, destination_two.node.number), second_vehicle.destinations[d2 - 1].departure_time + instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, destination_one.node.number)
             if first_arrival_time <= destination_two.node.due_date and second_arrival_time <= destination_one.node.due_date:
                 if abs(destination_two.node.ready_time - first_arrival_time) < abs(destination_two.node.ready_time - destination_two.arrival_time) \
-                    and abs(destination_one.node.ready_time - second_arrival_time) < abs(destination_one.node.ready_time - destination_one.arrival_time):
-                    #and rand(1, 100) < MUTATION_SWAP_PROBABILITY:
+                    and abs(destination_one.node.ready_time - second_arrival_time) < abs(destination_one.node.ready_time - destination_one.arrival_time) \
+                    and rand(1, 100) < MUTATION_FEASIBLE_SWAP_PROBABILITY:
 
                     first_vehicle.destinations[d1:], second_vehicle.destinations[d2:] = second_vehicle.destinations[d2:], first_vehicle.destinations[d1:]
                     
                     first_vehicle.calculate_length_of_route(instance)
-                    first_vehicle.calculate_destinations_time_windows(instance)
+                    for d in range(d1, len(first_vehicle.destinations)):
+                        first_vehicle.calculate_destination_time_window(instance, d - 1, d)
+                    #first_vehicle.calculate_destinations_time_windows(instance)
                     first_vehicle.calculate_vehicle_load()
                     second_vehicle.calculate_length_of_route(instance)
-                    second_vehicle.calculate_destinations_time_windows(instance)
+                    for d in range(d2, len(second_vehicle.destinations)):
+                        second_vehicle.calculate_destination_time_window(instance, d - 1, d)
+                    #second_vehicle.calculate_destinations_time_windows(instance)
                     second_vehicle.calculate_vehicle_load()
                     solution.objective_function(instance)
                     
@@ -468,9 +471,11 @@ def try_feasible_swap(instance: ProblemInstance, solution: FIGASolution, first_v
 
 def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Feasibility-based Swap Mutator
     first_vehicle_index = select_random_vehicle(solution, customers_required=1)
+    second_vehicle_index = None
 
     for _ in range(rand(1, MUTATION_MAX_FEASIBLE_SWAPS)):
-        try_feasible_swap(instance, solution, first_vehicle_index)
+        second_vehicle_index = select_random_vehicle(solution, customers_required=1, exclude_values=set({first_vehicle_index, second_vehicle_index if second_vehicle_index is not None else -1}))
+        try_feasible_swap(instance, solution, solution.vehicles[first_vehicle_index], solution.vehicles[second_vehicle_index])
 
     return solution
 
