@@ -1,10 +1,11 @@
 import copy
 from random import shuffle
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Union
 from FIGA.parameters import MUTATION_FEASIBLE_SWAP_PROBABILITY, MUTATION_MAX_SLICE_LENGTH, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY, MUTATION_THREATENED_WINDOW_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
+from destination import Destination
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
 from random import choice
@@ -100,10 +101,14 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
     crossover_solution.objective_function(instance)
     return crossover_solution
 
-def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Single-child Best Cost Route Crossover
-    crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
-
-    randomized_destinations = [destination for vehicle in parent_two_vehicles for destination in vehicle.get_customers_visited()]
+def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: Union[List[Vehicle], List[Destination]], missing_nodes_insertion: bool=False) -> FIGASolution: # Single-child Best Cost Route Crossover
+    if not missing_nodes_insertion:
+        crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
+        randomized_destinations = [destination for vehicle in parent_two_vehicles for destination in vehicle.get_customers_visited()]
+    else:
+        crossover_solution = parent_one
+        randomized_destinations = parent_two_vehicles
+    
     shuffle(randomized_destinations)
     for parent_destination in randomized_destinations:
         best_vehicle, best_position = (None,) * 2
@@ -157,6 +162,46 @@ def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two
 
     crossover_solution.calculate_length_of_routes(instance)
     crossover_solution.objective_function(instance)
+    return crossover_solution
+
+def try_feasible_crossover(instance: ProblemInstance, crossover_solution: FIGASolution, new_vehicle: Vehicle, missing_nodes: List[Destination]) -> FIGASolution:
+    for original_vehicle in crossover_solution.vehicles:
+        for d1 in range(1, len(new_vehicle.destinations) - 1):
+            if original_vehicle.get_num_of_customers_visited() >= 2:
+                for d2 in range(2, len(original_vehicle.destinations) - 1):
+                    simulated_arrival_time = original_vehicle.destinations[d2 - 1].departure_time + instance.get_distance(original_vehicle.destinations[d2 - 1].node.number, new_vehicle.destinations[d1].node.number)
+                    if simulated_arrival_time <= new_vehicle.destinations[d1].node.due_date:
+                        if abs(new_vehicle.destinations[d1].node.ready_time - (original_vehicle.destinations[d2].departure_time + instance.get_distance(original_vehicle.destinations[d2].node.number, new_vehicle.destinations[d1].node.number))) < abs(new_vehicle.destinations[d1].node.ready_time - simulated_arrival_time) or rand(1, 100) < 66:
+                            continue
+                        new_capacity = (original_vehicle.current_capacity - sum(d.node.demand for d in original_vehicle.destinations[d2:-1])) + sum(d.node.demand for d in new_vehicle.destinations[d1:-1])
+                        if new_capacity <= instance.capacity_of_vehicles:
+                            nodes_being_added = set({d.node.number for d in new_vehicle.destinations[d1:-1]})
+                            missing_nodes += list(filter(lambda d: d.node.number not in nodes_being_added, original_vehicle.destinations[d2:-1]))
+
+                            original_vehicle.destinations[d2:] = new_vehicle.destinations[d1:]
+
+                            original_vehicle.current_capacity = new_capacity
+                            for d in range(d2, len(original_vehicle.destinations)):
+                                original_vehicle.calculate_destination_time_window(instance, d - 1, d)
+                            original_vehicle.calculate_length_of_route(instance)
+
+                            return
+                    else:
+                        break
+
+def PBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Partition-based Route Crossover
+    crossover_solution = copy.deepcopy(parent_one)
+    
+    shuffle(crossover_solution.vehicles)
+    missing_nodes = []
+
+    for new_vehicle in parent_two_vehicles:
+        try_feasible_crossover(instance, crossover_solution, new_vehicle, missing_nodes)
+    crossover_solution.objective_function(instance)
+
+    if missing_nodes:
+        FBR_crossover(instance, crossover_solution, missing_nodes, missing_nodes_insertion=True)
+
     return crossover_solution
 
 def select_random_vehicle(solution: FIGASolution, customers_required: int=2, exclude_values: Set[int]=None) -> int:
@@ -260,8 +305,7 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
 
 def DBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Swap Mutator
     first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
-    second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
-    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
+    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})]
 
     for d1 in range(1, first_vehicle.get_num_of_customers_visited()):
         for d2 in range(1, second_vehicle.get_num_of_customers_visited()):
@@ -336,8 +380,7 @@ def try_distance_based_swap(instance: ProblemInstance, solution: FIGASolution, f
 
 def LDHR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Low Distance and High Ready-time Mutator
     first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
-    second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})
-    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[second_furthest_traveling_vehicle]
+    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})]
 
     try_distance_based_swap(instance, solution, first_vehicle, second_vehicle)
 
@@ -532,7 +575,7 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
     first_vehicle_index = select_random_vehicle(solution, customers_required=1)
     first_vehicle, second_vehicle = solution.vehicles[first_vehicle_index], solution.vehicles[select_random_vehicle(solution, customers_required=1, exclude_values=set({first_vehicle_index}))]
 
-    slice_beginnings, iterations_since_discovery = None, 0
+    slice_beginnings, iterations_since_discovery, first_assigned_cargo, second_assigned_cargo = None, 0, 0.0, 0.0
 
     for d1, first_destination in enumerate(first_vehicle.get_customers_visited(), 1):
         for d2, second_destination in enumerate(second_vehicle.get_customers_visited(), 1):
@@ -542,7 +585,7 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
             first_simulated_arrival_time = first_vehicle.destinations[d1 - 1].departure_time + first_distance_from_previous
             if first_simulated_arrival_time > second_destination.node.due_date:
                 if slice_beginnings:
-                    slice_beginnings, iterations_since_discovery = None, 0
+                    slice_beginnings, iterations_since_discovery, first_assigned_cargo, second_assigned_cargo = None, 0, 0.0, 0.0
                 break
             if first_simulated_arrival_time < second_destination.node.ready_time:
                 first_simulated_arrival_time = second_destination.node.ready_time
@@ -551,14 +594,17 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
             second_simulated_arrival_time = second_vehicle.destinations[d2 - 1].departure_time + second_distance_from_previous
             if second_simulated_arrival_time > first_destination.node.due_date:
                 if slice_beginnings:
-                    slice_beginnings, iterations_since_discovery = None, 0
+                    slice_beginnings, iterations_since_discovery, first_assigned_cargo, second_assigned_cargo = None, 0, 0.0, 0.0
                 break
             if second_simulated_arrival_time < first_destination.node.ready_time:
                 second_simulated_arrival_time = first_destination.node.ready_time
             second_simulated_departure_time = second_simulated_arrival_time + first_destination.node.service_duration
 
             if first_simulated_departure_time + instance.get_distance(second_vehicle.destinations[d2].node.number, first_vehicle.destinations[d1 + 1].node.number) < first_vehicle.destinations[d1 + 1].node.due_date \
-                and second_simulated_departure_time + instance.get_distance(first_vehicle.destinations[d1].node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date:
+                and second_simulated_departure_time + instance.get_distance(first_vehicle.destinations[d1].node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date \
+                and (first_vehicle.current_capacity - second_assigned_cargo) + first_assigned_cargo < instance.capacity_of_vehicles \
+                and (second_vehicle.current_capacity - first_assigned_cargo) + second_assigned_cargo < instance.capacity_of_vehicles:
+
                 if not slice_beginnings:
                     slice_beginnings = (d1, d2)
                 elif iterations_since_discovery >= rand(1, MUTATION_MAX_SLICE_LENGTH):
@@ -578,7 +624,9 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
                     return solution
                 else:
                     iterations_since_discovery += 1
+                    first_assigned_cargo += second_destination.node.demand
+                    second_assigned_cargo += first_destination.node.demand
             elif slice_beginnings and not iterations_since_discovery:
                 slice_beginnings = None
-        slice_beginnings, iterations_since_discovery = None, 0
+        slice_beginnings, iterations_since_discovery, first_assigned_cargo, second_assigned_cargo = None, 0, 0.0, 0.0
     return solution

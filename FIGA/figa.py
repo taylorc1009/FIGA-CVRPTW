@@ -8,8 +8,8 @@ from random import shuffle, sample
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover, VE_mutation
-from FIGA.parameters import ES_CROSSOVER_MAX_VEHICLES, FBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
+from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, FBR_crossover, PBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover, VE_mutation
+from FIGA.parameters import ES_CROSSOVER_MAX_VEHICLES, FBR_CROSSOVER_MAX_VEHICLES, PBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
 from vehicle import Vehicle
 from numpy import ceil, random
 from FIGA.archive.mutation import MMOEASA_mutation3, MMOEASA_mutation5
@@ -149,15 +149,17 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        crossover = rand(1, 3)
+        crossover = rand(1, 4)
 
         match crossover:
             case 1:
-                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(ES_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
+                crossover_solution = PBR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(PBR_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
             case 2:
+                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(ES_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
+            case 3:
                 crossover_solution = SBCR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(SBRC_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
             case _: # this crossover has a higher chance of occurring
-                crossover = 3
+                crossover = 4
                 crossover_solution = FBR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(FBR_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
 
         return crossover_solution, crossover
