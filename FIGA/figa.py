@@ -149,7 +149,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         crossover_invocations += 1
 
         crossover_solution = None
-        crossover = rand(1, 4)
+        crossover = rand(2, 4)
 
         match crossover:
             case 1:
@@ -171,7 +171,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(1 if solution.temperature > temperature_min else 4, 10)
+        mutator = rand(1 if solution.temperature > temperature_min else 5, 10)
 
         match mutator:
             case 1:
@@ -181,11 +181,11 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 3:
                 mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 4:
-                mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
-            case 5:
-                mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
-            case 6:
                 mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
+            case 5:
+                mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+            case 6:
+                mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
             case 7:
                 mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
             case 8:

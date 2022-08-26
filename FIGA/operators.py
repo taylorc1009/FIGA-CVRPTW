@@ -361,8 +361,8 @@ def try_distance_based_swap(instance: ProblemInstance, solution: FIGASolution, f
                 second_simulated_arrival_time = first_vehicle.destinations[d1].node.ready_time
             second_simulated_departure_time = second_simulated_arrival_time + first_vehicle.destinations[d1].node.service_duration
 
-            if first_distance_from_previous <= second_vehicle.destinations[d2].node.ready_time - first_vehicle.destinations[d1 - 1].node.ready_time \
-                and second_distance_from_previous <= first_vehicle.destinations[d1].node.ready_time - second_vehicle.destinations[d2 - 1].node.ready_time \
+            if (((second_vehicle.destinations[d2].node.ready_time - first_vehicle.destinations[d1 - 1].node.ready_time) > (first_vehicle.destinations[d1].node.ready_time - first_vehicle.destinations[d1 - 1].node.ready_time) and first_distance_from_previous < instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, first_vehicle.destinations[d1].node.number)) \
+                or ((first_vehicle.destinations[d1].node.ready_time - second_vehicle.destinations[d2 - 1].node.ready_time) > (second_vehicle.destinations[d2].node.ready_time - second_vehicle.destinations[d2 - 1].node.ready_time) and second_distance_from_previous < instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, second_vehicle.destinations[d2].node.number))) \
                 and first_simulated_departure_time + instance.get_distance(second_vehicle.destinations[d2].node.number, first_vehicle.destinations[d1 + 1].node.number) < first_vehicle.destinations[d1 + 1].node.due_date \
                 and second_simulated_departure_time + instance.get_distance(first_vehicle.destinations[d1].node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date \
                 and rand(1, 100) <= MUTATION_SWAP_PROBABILITY: # probability prevents this operator from always swapping the first good swap found every time as this potentially continuously tries to swap the same destinations
@@ -382,6 +382,7 @@ def LDHR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
     first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
     first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})]
 
+    # for _ in range(rand(1, MUTATION_MAX_FEASIBLE_SWAPS)):
     try_distance_based_swap(instance, solution, first_vehicle, second_vehicle)
 
     return solution
