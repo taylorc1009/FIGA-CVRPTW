@@ -294,7 +294,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         crossover_parent_two = selection_tournament(nondominated_set, population)
 
         for s, solution in enumerate(population):
-            child, crossover = try_crossover(instance, solution, crossover_parent_two if solution.id != crossover_parent_two.id else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
+            child, crossover = try_crossover(instance, solution, crossover_parent_two if solution is not crossover_parent_two else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
             mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
                 child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_max, temperature_stop), mutation_probability, temperature_min)
