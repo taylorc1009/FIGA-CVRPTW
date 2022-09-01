@@ -1,5 +1,5 @@
 import copy
-from random import shuffle
+from random import sample, shuffle
 import time
 from threading import Lock
 from multiprocessing import Process
@@ -10,7 +10,7 @@ from problemInstance import ProblemInstance
 from constants import INT_MAX
 from common import rand
 from threading import Thread, currentThread
-from FIGA.figa import is_nondominated # if you move the double BCRC from this archive, this import will cause a circular import
+#from FIGA.figa import is_nondominated # if you move the double BCRC from this archive, this import will cause a circular import
 from vehicle import Vehicle
 
 class CrossoverPositionStats:
@@ -166,10 +166,10 @@ def crossover_tree_multithreaded(instance: ProblemInstance, parent_one: FIGASolu
 
 """ VVV Parallel double Best Cost Route Crossover START """
 
-def set_up_crossover_child(instance: ProblemInstance, primary_parent: FIGASolution, secondary_parent_vehicle: Vehicle) -> FIGASolution:
-    child_solution = copy.deepcopy(primary_parent)
+def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, parent_two_destinations: List[Vehicle]) -> FIGASolution:
+    child_solution = copy.deepcopy(parent_one)
 
-    nodes_to_remove = {d.node.number for d in secondary_parent_vehicle.get_customers_visited()} # create a set containing the numbers of every node in parent_two_vehicle to be merged into parent_one's routes
+    nodes_to_remove = set({d.node.number for d in parent_two_destinations}) # create a set containing the numbers of every node in parent_two_vehicle to be merged into parent_one's routes
     i = 0
     while i < len(child_solution.vehicles) and nodes_to_remove:
         increment = True
@@ -193,20 +193,20 @@ def set_up_crossover_child(instance: ProblemInstance, primary_parent: FIGASoluti
             i += 1
 
     child_solution.calculate_routes_time_windows(instance)
-    #child_solution.calculate_length_of_routes(instance) # this is not required here as the crossovers don't do any work with the total length of each route
+    #child_solution.calculate_length_of_routes(instance) # this is not required here as the crossovers don't do any work with the total length of each route at this stage
 
     return child_solution
 
-def crossover_thread(instance: ProblemInstance, primary_parent: FIGASolution, secondary_parent_vehicle: Vehicle, results: Dict[str, FIGASolution]) -> None:
-    crossover_solution = set_up_crossover_child(instance, primary_parent, secondary_parent_vehicle)
-
-    randomized_destinations = list(range(1, len(secondary_parent_vehicle.destinations) - 1))
+def crossover_thread(instance: ProblemInstance, primary_parent: FIGASolution, parent_two_vehicles: Vehicle, results: Dict[str, FIGASolution]) -> None:
+    randomized_destinations = [destination for vehicle in parent_two_vehicles for destination in vehicle.get_customers_visited()]
+    crossover_solution = set_up_crossover_child(instance, primary_parent, randomized_destinations)
     shuffle(randomized_destinations)
-    for d in randomized_destinations:
-        parent_destination = secondary_parent_vehicle.destinations[d]
-        best_vehicle, best_position = instance.amount_of_vehicles, 1
+
+    for parent_destination in randomized_destinations:
+        best_vehicle, best_position = (None,) * 2
         shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
-        highest_wait_time, lowest_ready_time_difference = 0.0, float(INT_MAX)
+        highest_wait_time = 0.0
+        lowest_ready_time_difference = float(INT_MAX)
         found_feasible_location = False
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
@@ -224,16 +224,18 @@ def crossover_thread(instance: ProblemInstance, primary_parent: FIGASolution, se
 
                     # if, based on the simulated arrival and departure times, insertion does not violate time window constraints and the distance from the nodes at j - 1 and j is less than any that's been found, then record this as the best position
                     if not (simulated_arrival_time > parent_destination.node.due_date or simulated_departure_time + distance_to_next > vehicle.destinations[j].node.due_date) \
-                            and ((distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next)):
+                        and ((distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next)):
                         best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
                         found_feasible_location = True
-                    elif not found_feasible_location and crossover_solution.vehicles[i].destinations[j - 1].wait_time > highest_wait_time and abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous) < lowest_ready_time_difference:
+                    elif not found_feasible_location:
+                        ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
+                        if crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time and ready_time_difference < lowest_ready_time_difference:
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
-                        best_vehicle, best_position, highest_wait_time, lowest_ready_time_difference = i, j - 1, crossover_solution.vehicles[i].destinations[j - 1].wait_time, abs(crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous)
+                            best_vehicle, best_position, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
 
-        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and not best_vehicle < instance.amount_of_vehicles:
+        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and best_vehicle is None:
             best_vehicle = len(crossover_solution.vehicles)
-            crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination))
+            crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
         else:
             # best_vehicle and best_position will equal the insertion position before the vehicle with the longest wait time
             # that is if no feasible insertion point was found, otherwise it will equal the fittest feasible insertion point
@@ -246,18 +248,18 @@ def crossover_thread(instance: ProblemInstance, primary_parent: FIGASolution, se
     crossover_solution.objective_function(instance)
     results[currentThread().getName()] = crossover_solution
 
-def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution) -> Tuple[FIGASolution, FIGASolution]:
-    parent_one_vehicle = parent_one.vehicles[rand(0, len(parent_one.vehicles) - 1)]
-    parent_two_vehicle = parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)]
+def crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: List[Vehicle]) -> Tuple[FIGASolution, FIGASolution]:
+    parent_one_vehicles = sample(parent_one.vehicles, rand(1, 3))
+    parent_two_vehicles = sample(parent_two.vehicles, rand(1, 3))
 
     thread_results: Dict[str, FIGASolution] = {"child_one": None, "child_two": None}
-    child_one_thread = Thread(name="child_one", target=crossover_thread, args=(instance, parent_one, parent_two_vehicle, thread_results))
-    child_two_thread = Thread(name="child_two", target=crossover_thread, args=(instance, parent_two, parent_one_vehicle, thread_results))
+    child_one_thread = Thread(name="child_one", target=crossover_thread, args=(instance, parent_one, parent_two_vehicles, thread_results))
+    child_two_thread = Thread(name="child_two", target=crossover_thread, args=(instance, parent_two, parent_one_vehicles, thread_results))
     child_one_thread.start()
     child_two_thread.start()
     child_one_thread.join()
     child_two_thread.join()
 
-    return thread_results["child_one"] if is_nondominated(thread_results["child_one"], thread_results["child_two"]) else thread_results["child_two"]
+    return thread_results["child_one"], thread_results["child_two"]
 
 """ ^^^ Parallel double Best Cost Route Crossover END """
