@@ -171,7 +171,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(1 if solution.temperature > temperature_min else 5, 10)
+        mutator = rand(1 if solution.temperature > temperature_min else 4, 10)
 
         match mutator:
             case 1:

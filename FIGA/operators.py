@@ -52,7 +52,7 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
         # best_vehicle_by_time, best_position_by_time = (None,) * 2
         shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
         highest_wait_time = 0.0
-        lowest_ready_time_difference = float(INT_MAX)
+        #lowest_ready_time_difference = float(INT_MAX)
         found_feasible_location = False
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
@@ -77,8 +77,8 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
                         #     best_vehicle_by_time, best_position_by_time, lowest_ready_time_difference = i, j, ready_time_difference
                         found_feasible_location = True
                     elif not found_feasible_location:
-                        ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
-                        if crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time and ready_time_difference < lowest_ready_time_difference:
+                        #ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
+                        if crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time:# and ready_time_difference < lowest_ready_time_difference:
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
                             best_vehicle, best_position, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
 
@@ -101,7 +101,7 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
     crossover_solution.objective_function(instance)
     return crossover_solution
 
-def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: Union[List[Vehicle], List[Destination]], missing_nodes_insertion: bool=False) -> FIGASolution: # Single-child Best Cost Route Crossover
+def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: Union[List[Vehicle], List[Destination]], missing_nodes_insertion: bool=False) -> FIGASolution: # Feasibility-based Best Route Crossover
     if not missing_nodes_insertion:
         crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
         randomized_destinations = [destination for vehicle in parent_two_vehicles for destination in vehicle.get_customers_visited()]
@@ -113,7 +113,7 @@ def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_tw
     for parent_destination in randomized_destinations:
         best_vehicle, best_position = (None,) * 2
         highest_wait_time = 0.0
-        lowest_ready_time_difference = float(INT_MAX)
+        #lowest_ready_time_difference = float(INT_MAX)
         feasible_locations = []
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
@@ -133,8 +133,8 @@ def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_tw
                     if not (simulated_arrival_time > parent_destination.node.due_date or simulated_departure_time + distance_to_next > vehicle.destinations[j].node.due_date):
                         feasible_locations.append((i, j))
                     elif not feasible_locations:
-                        ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
-                        if crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time and ready_time_difference < lowest_ready_time_difference:
+                        #ready_time_difference = abs(vehicle.destinations[j].node.ready_time - (crossover_solution.vehicles[i].destinations[j - 1].departure_time + distance_from_previous))
+                        if crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time:# and ready_time_difference < lowest_ready_time_difference:
                         # if no feasible insertion point has been found yet and the wait time of the previous destination is the highest that's been found, then record this as the best position
                             best_vehicle, best_position, highest_wait_time = i, j, crossover_solution.vehicles[i].destinations[j].wait_time
 
@@ -242,7 +242,7 @@ def TWBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 
     for d in range(1, vehicle.get_num_of_customers_visited()):
         if (not reverse and vehicle.destinations[d].node.ready_time > vehicle.destinations[d + 1].node.ready_time) \
-            or (reverse and vehicle.destinations[d].node.ready_time < vehicle.destinations[d + 1].node.ready_time):
+            or (reverse and vehicle.destinations[d].node.ready_time < vehicle.destinations[d + 1].node.ready_time and rand(1, 100) < MUTATION_SWAP_PROBABILITY):
             swap(vehicle.destinations, d, d + 1)
             break
 
@@ -362,6 +362,7 @@ def try_distance_based_swap(instance: ProblemInstance, solution: FIGASolution, f
             second_simulated_departure_time = second_simulated_arrival_time + first_vehicle.destinations[d1].node.service_duration
 
             if (((second_vehicle.destinations[d2].node.ready_time - first_vehicle.destinations[d1 - 1].node.ready_time) > (first_vehicle.destinations[d1].node.ready_time - first_vehicle.destinations[d1 - 1].node.ready_time) and first_distance_from_previous < instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, first_vehicle.destinations[d1].node.number)) \
+                #! using "and" in the next line, instead of "or", appears to cause greater convergence
                 or ((first_vehicle.destinations[d1].node.ready_time - second_vehicle.destinations[d2 - 1].node.ready_time) > (second_vehicle.destinations[d2].node.ready_time - second_vehicle.destinations[d2 - 1].node.ready_time) and second_distance_from_previous < instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, second_vehicle.destinations[d2].node.number))) \
                 and first_simulated_departure_time + instance.get_distance(second_vehicle.destinations[d2].node.number, first_vehicle.destinations[d1 + 1].node.number) < first_vehicle.destinations[d1 + 1].node.due_date \
                 and second_simulated_departure_time + instance.get_distance(first_vehicle.destinations[d1].node.number, second_vehicle.destinations[d2 + 1].node.number) < second_vehicle.destinations[d2 + 1].node.due_date \
@@ -379,11 +380,12 @@ def try_distance_based_swap(instance: ProblemInstance, solution: FIGASolution, f
                 return
 
 def LDHR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Low Distance and High Ready-time Mutator
-    first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
-    first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})]
+    first_furthest_traveling_vehicle, second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution), None
+    first_vehicle = solution.vehicles[first_furthest_traveling_vehicle]
 
-    # for _ in range(rand(1, MUTATION_MAX_FEASIBLE_SWAPS)):
-    try_distance_based_swap(instance, solution, first_vehicle, second_vehicle)
+    for _ in range(rand(1, MUTATION_MAX_FEASIBLE_SWAPS)):
+        second_furthest_traveling_vehicle = get_far_traveling_vehicle(solution, skip_vehicles=set({first_furthest_traveling_vehicle, second_furthest_traveling_vehicle if second_furthest_traveling_vehicle else -1}))
+        try_distance_based_swap(instance, solution, first_vehicle, solution.vehicles[second_furthest_traveling_vehicle])
 
     return solution
 
@@ -572,6 +574,12 @@ def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
 
     return solution
 
+#************************************************************************************************
+#* RE-WRITE THIS PBS mutator
+#************************************************************************************************
+#* you could swap, for example, only two destinations from the first vehicle, but 5 from the
+#* second, instead of only the same amount from each route; creating stronger swaps
+#************************************************************************************************
 def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Partition-based Swap Mutator
     first_vehicle_index = select_random_vehicle(solution, customers_required=1)
     first_vehicle, second_vehicle = solution.vehicles[first_vehicle_index], solution.vehicles[select_random_vehicle(solution, customers_required=1, exclude_values=set({first_vehicle_index}))]
