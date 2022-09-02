@@ -102,12 +102,8 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
     return crossover_solution
 
 def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: Union[List[Vehicle], List[Destination]], missing_nodes_insertion: bool=False) -> FIGASolution: # Feasibility-based Best Route Crossover
-    if not missing_nodes_insertion:
-        crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
-        randomized_destinations = [destination for vehicle in parent_two_vehicles for destination in vehicle.get_customers_visited()]
-    else:
-        crossover_solution = parent_one
-        randomized_destinations = parent_two_vehicles
+    crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
+    randomized_destinations = [destination for vehicle in parent_two_vehicles for destination in vehicle.get_customers_visited()]
     
     shuffle(randomized_destinations)
     for parent_destination in randomized_destinations:
@@ -162,46 +158,6 @@ def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two
 
     crossover_solution.calculate_length_of_routes(instance)
     crossover_solution.objective_function(instance)
-    return crossover_solution
-
-def try_feasible_crossover(instance: ProblemInstance, crossover_solution: FIGASolution, new_vehicle: Vehicle, missing_nodes: List[Destination]) -> FIGASolution:
-    for original_vehicle in crossover_solution.vehicles:
-        for d1 in range(1, len(new_vehicle.destinations) - 1):
-            if original_vehicle.get_num_of_customers_visited() >= 2:
-                for d2 in range(2, len(original_vehicle.destinations) - 1):
-                    simulated_arrival_time = original_vehicle.destinations[d2 - 1].departure_time + instance.get_distance(original_vehicle.destinations[d2 - 1].node.number, new_vehicle.destinations[d1].node.number)
-                    if simulated_arrival_time <= new_vehicle.destinations[d1].node.due_date:
-                        if abs(new_vehicle.destinations[d1].node.ready_time - (original_vehicle.destinations[d2].departure_time + instance.get_distance(original_vehicle.destinations[d2].node.number, new_vehicle.destinations[d1].node.number))) < abs(new_vehicle.destinations[d1].node.ready_time - simulated_arrival_time) or rand(1, 100) < 66:
-                            continue
-                        new_capacity = (original_vehicle.current_capacity - sum(d.node.demand for d in original_vehicle.destinations[d2:-1])) + sum(d.node.demand for d in new_vehicle.destinations[d1:-1])
-                        if new_capacity <= instance.capacity_of_vehicles:
-                            nodes_being_added = set({d.node.number for d in new_vehicle.destinations[d1:-1]})
-                            missing_nodes += list(filter(lambda d: d.node.number not in nodes_being_added, original_vehicle.destinations[d2:-1]))
-
-                            original_vehicle.destinations[d2:] = new_vehicle.destinations[d1:]
-
-                            original_vehicle.current_capacity = new_capacity
-                            for d in range(d2, len(original_vehicle.destinations)):
-                                original_vehicle.calculate_destination_time_window(instance, d - 1, d)
-                            original_vehicle.calculate_length_of_route(instance)
-
-                            return
-                    else:
-                        break
-
-def PBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Partition-based Route Crossover
-    crossover_solution = copy.deepcopy(parent_one)
-    
-    shuffle(crossover_solution.vehicles)
-    missing_nodes = []
-
-    for new_vehicle in parent_two_vehicles:
-        try_feasible_crossover(instance, crossover_solution, new_vehicle, missing_nodes)
-    crossover_solution.objective_function(instance)
-
-    if missing_nodes:
-        FBR_crossover(instance, crossover_solution, missing_nodes, missing_nodes_insertion=True)
-
     return crossover_solution
 
 def select_random_vehicle(solution: FIGASolution, customers_required: int=2, exclude_values: Set[int]=None) -> int:
