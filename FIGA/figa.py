@@ -12,7 +12,6 @@ from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, FBR_cross
 from FIGA.parameters import ES_CROSSOVER_MAX_VEHICLES, FBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
 from vehicle import Vehicle
 from numpy import ceil, random
-from FIGA.archive.mutation import MMOEASA_mutation3, MMOEASA_mutation5
 
 # operators' statistics
 initialiser_execution_time: int=0
@@ -163,23 +162,23 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         return crossover_solution, crossover
     return parent_one, None
 
-def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int, temperature_min: float) -> Tuple[FIGASolution, Union[int, None]]:
+def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int, temperature_max: float, temperature_min: float) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < mutation_probability:
         global mutation_invocations, mutation_acceptances
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(1 if solution.temperature > temperature_min else 4, 10)
+        mutator = rand((1 if solution.temperature > temperature_max * 0.94 else 2) if solution.temperature > temperature_min else 5, 10)
 
         match mutator:
             case 1:
-                mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
+                mutated_solution = PBS_mutator(instance, mutated_solution) # Partition-based Swap Mutator
             case 2:
-                mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
+                mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
             case 3:
-                mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
+                mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
             case 4:
-                mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
+                mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 5:
                 mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
             case 6:
@@ -191,13 +190,9 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
             case 9:
                 mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
             case 10:
-                mutated_solution = PBS_mutator(instance, mutated_solution) # Partition-based Swap Mutator
+                mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
             case 11:
                 mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time Based Reorder Mutator
-            case 12:
-                mutated_solution = MMOEASA_mutation3(instance, mutated_solution)
-            case 13:
-                mutated_solution = MMOEASA_mutation5(instance, mutated_solution)
 
         return mutated_solution, mutator
     return solution, None
@@ -295,7 +290,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution is not crossover_parent_two else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
             mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_max, temperature_stop), mutation_probability, temperature_min)
+                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature, temperature_max, temperature_stop), mutation_probability, temperature_max, temperature_min)
                 mutations.append(mutator)
 
             if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, temperature_max, temperature_stop, population=population) is not solution: # or is_nondominated(solution, child):
