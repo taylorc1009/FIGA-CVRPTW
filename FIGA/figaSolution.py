@@ -1,12 +1,11 @@
 import copy
 from typing import List, Dict
-from common import INT_MAX
 from data import open_problem_instance
-from destination import Destination
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from solution import Solution
 from pathlib import Path
+from MMOEASA.constants import INFINITY
 
 class FIGASolution(Solution):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, num_vehicles: int=0, temperature: float=0.0, default_temperature: float=0.0, cooling_rate: float=0.0) -> None:
@@ -18,8 +17,8 @@ class FIGASolution(Solution):
 
     def __nullify(self) -> None:
         self.feasible = False
-        self.total_distance = float(INT_MAX)
-        self.num_vehicles = float(INT_MAX)
+        self.total_distance = float(INFINITY)
+        self.num_vehicles = float(INFINITY)
 
     def objective_function(self, instance: ProblemInstance) -> None:
         if len(self.vehicles) > instance.amount_of_vehicles:

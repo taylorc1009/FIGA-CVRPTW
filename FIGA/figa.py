@@ -6,6 +6,7 @@ from constants import INT_MAX
 from common import rand, check_are_identical, check_iterations_termination_condition, check_seconds_termination_condition
 from random import shuffle, sample
 from destination import Destination
+from node import Node
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
 from FIGA.operators import ATBR_mutation, FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover, VE_mutation
@@ -22,7 +23,7 @@ mutation_invocations: int=0
 mutation_acceptances: Dict[int, int]={}
 metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0}
 
-def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
+"""def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
     range_of_sorted_nodes = int(ceil(len(instance.nodes) / 10))
     solution = FIGASolution(_id=_id)
@@ -60,7 +61,15 @@ def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
     solution.calculate_length_of_routes(instance)
     solution.objective_function(instance)
 
-    return solution
+    return solution"""
+
+def fast_feasible_point_check(instance: ProblemInstance, vehicle: Vehicle, destination_index: int, node: Node):
+    vehicle.current_capacity += node.demand
+    for i in range(destination_index, len(vehicle.destinations)):
+        vehicle.calculate_destination_time_window(instance, i - 1, i)
+        if vehicle.destinations[i].arrival_time > vehicle.destinations[i].node.due_date:
+            return False
+    return True
 
 def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
@@ -72,12 +81,11 @@ def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
         shuffle(shuffled_nodes_buffer)
         for node in shuffled_nodes_buffer:
             inserted = False
+            new_destination = Destination(node=node)
             for vehicle in solution.vehicles:
-                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + node.demand > instance.capacity_of_vehicles:
+                if vehicle.current_capacity + node.demand > instance.capacity_of_vehicles:
                     continue
-                previous_destination = vehicle.get_customers_visited()[-1]
-                new_destination = Destination(node=node)
-                new_destination.arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, new_destination.node.number)
+                new_destination.arrival_time = vehicle.destinations[-2].departure_time + instance.get_distance(vehicle.destinations[-2].node.number, new_destination.node.number)
                 if new_destination.arrival_time > new_destination.node.due_date:
                     continue
                 if new_destination.arrival_time < new_destination.node.ready_time: # if the vehicle arrives before "ready_time" then it will have to wait for that moment before serving the node
@@ -92,14 +100,38 @@ def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
                 inserted = True
                 break
             if not inserted:
-                solution.vehicles.append(Vehicle.create_route(instance, node))
-                solution.vehicles[-1].calculate_destinations_time_windows(instance)
-                solution.vehicles[-1].calculate_vehicle_load()
+                if len(solution.vehicles) < instance.amount_of_vehicles:
+                    solution.vehicles.append(Vehicle.create_route(instance, node))
+                    solution.vehicles[-1].calculate_destinations_time_windows(instance)
+                    solution.vehicles[-1].current_capacity = node.demand
+                else:
+                    longest_wait_time, longest_waiting_point = 0.0, (0, 0)
+                    for v, vehicle in enumerate(solution.vehicles):
+                        if vehicle.current_capacity + node.demand > instance.capacity_of_vehicles:
+                            for d in range(1, len(vehicle.destinations) - 1):
+                                vehicle.destinations.insert(d, new_destination)
+                                if fast_feasible_point_check(instance, vehicle, d, node):
+                                    inserted = True
+                                    break
+                                else:
+                                    del vehicle.destinations[d]
+                                    for i in range(d, len(vehicle.destinations)):
+                                        vehicle.calculate_destination_time_window(instance, i - 1, i)
+                                    if vehicle.destinations[d].wait_time > longest_wait_time:
+                                        longest_wait_time, longest_waiting_point = vehicle.destinations[d].wait_time, (v, d)
+                            if inserted:
+                                break
+                    if not inserted:
+                        v, d = longest_waiting_point
+                        solution.vehicles[v].destinations.insert(d - 1, new_destination)
+                        solution.vehicles[v].current_capacity += node.demand
+                        for i in range(d - 1, len(solution.vehicles[v].destinations)):
+                            solution.vehicles[v].calculate_destination_time_window(instance, i - 1, i)
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
 
-    solution.calculate_routes_time_windows(instance)
     solution.calculate_length_of_routes(instance)
     solution.objective_function(instance)
+    solution.check_format_is_correct(instance)
 
     return solution
 
@@ -131,6 +163,28 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
         if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
             del nondominated_set[i if i < 20 else 20:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
             return process_time() if subject_solution in nondominated_set else None
+
+def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
+    i = 0
+
+    while i < len(solution.vehicles) and len(solution.vehicles) < instance.amount_of_vehicles:
+        for j, destination in enumerate(solution.vehicles[i].get_customers_visited(), 1):
+            if destination.arrival_time > destination.node.due_date:
+                solution.vehicles.insert(i + 1, Vehicle.create_route(instance, solution.vehicles[i].destinations[j:-1]))
+                del solution.vehicles[i].destinations[j:-1]
+
+                solution.vehicles[i].calculate_vehicle_load()
+                solution.vehicles[i].calculate_length_of_route(instance)
+                solution.vehicles[i].calculate_destination_time_window(instance, j - 1, j)
+
+                solution.vehicles[i + 1].calculate_vehicle_load()
+                solution.vehicles[i + 1].calculate_length_of_route(instance)
+                solution.vehicles[i + 1].calculate_destinations_time_windows(instance)
+
+                break
+        i += 1
+
+    solution.objective_function(instance)
 
 def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None) -> FIGASolution:
     if exclude_solution:
@@ -282,6 +336,9 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         crossover_parent_two = selection_tournament(nondominated_set, population)
 
         for s, solution in enumerate(population):
+            if not solution.feasible:
+                attempt_time_window_based_reorder(instance, solution)
+
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution is not crossover_parent_two else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
             mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
