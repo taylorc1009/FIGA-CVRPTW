@@ -28,14 +28,12 @@ def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
     solution = FIGASolution(_id=_id)
 
     while sorted_nodes:
-        shuffle_buffer_size = range_of_sorted_nodes if range_of_sorted_nodes < len(sorted_nodes) else len(sorted_nodes) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
-        shuffled_nodes_buffer = sorted_nodes[:shuffle_buffer_size] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
+        shuffled_nodes_buffer = sorted_nodes[:min(range_of_sorted_nodes, len(sorted_nodes))] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
         shuffle(shuffled_nodes_buffer)
-        for i in range(shuffle_buffer_size):
-            node = shuffled_nodes_buffer[i]
+        for node in shuffled_nodes_buffer:
             shortest_waiting_vehicle, lowest_wait_time_difference = instance.amount_of_vehicles, float(INT_MAX)
             for v, vehicle in enumerate(solution.vehicles):
-                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + shuffled_nodes_buffer[i].demand > instance.capacity_of_vehicles:
+                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + node.demand > instance.capacity_of_vehicles:
                     continue
                 previous_destination = vehicle.get_customers_visited()[-1]
                 arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, node.number)
@@ -53,7 +51,7 @@ def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
                 vehicle.calculate_destination_time_window(instance, -3, -2)
                 vehicle.calculate_destination_time_window(instance, -2, -1)
             else:
-                solution.vehicles.append(Vehicle.create_route(instance, shuffled_nodes_buffer[i]))
+                solution.vehicles.append(Vehicle.create_route(instance, node))
                 solution.vehicles[-1].calculate_destinations_time_windows(instance)
                 solution.vehicles[-1].calculate_vehicle_load()
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
@@ -66,20 +64,19 @@ def DTWIH(instance: ProblemInstance, _id: int) -> FIGASolution:
 
 def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
-    range_of_sorted_nodes = int(ceil(len(instance.nodes) / 10))
+    range_of_sorted_nodes = int(ceil((len(instance.nodes) - 1) / 10))
     solution = FIGASolution(_id=_id)
 
     while sorted_nodes:
-        shuffle_buffer_size = min(range_of_sorted_nodes, len(sorted_nodes)) # if there are less remaining nodes than there are routes, set the range end to the number of remaining nodes
-        shuffled_nodes_buffer = sorted_nodes[:shuffle_buffer_size] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
+        shuffled_nodes_buffer = sorted_nodes[:min(range_of_sorted_nodes, len(sorted_nodes))] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
         shuffle(shuffled_nodes_buffer)
-        for i in range(shuffle_buffer_size):
+        for node in shuffled_nodes_buffer:
             inserted = False
-            for v, vehicle in enumerate(solution.vehicles):
-                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + shuffled_nodes_buffer[i].demand > instance.capacity_of_vehicles:
+            for vehicle in solution.vehicles:
+                if not vehicle.get_num_of_customers_visited() or vehicle.current_capacity + node.demand > instance.capacity_of_vehicles:
                     continue
                 previous_destination = vehicle.get_customers_visited()[-1]
-                new_destination = Destination(node=shuffled_nodes_buffer[i])
+                new_destination = Destination(node=node)
                 new_destination.arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, new_destination.node.number)
                 if new_destination.arrival_time > new_destination.node.due_date:
                     continue
@@ -92,10 +89,10 @@ def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
                 vehicle.destinations.insert(len(vehicle.destinations) - 1, new_destination)
                 vehicle.current_capacity += new_destination.node.demand
                 vehicle.calculate_destination_time_window(instance, -2, -1)
-                inserted = v, True
+                inserted = True
                 break
             if not inserted:
-                solution.vehicles.append(Vehicle.create_route(instance, shuffled_nodes_buffer[i]))
+                solution.vehicles.append(Vehicle.create_route(instance, node))
                 solution.vehicles[-1].calculate_destinations_time_windows(instance)
                 solution.vehicles[-1].calculate_vehicle_load()
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
@@ -267,7 +264,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     initialiser_execution_time = process_time()
     half_population_size = round(population_size / 2)
     for i in range(0, population_size):
-        population.insert(i, DTWIH(instance, i) if i < half_population_size else DTWIH_II(instance, i))
+        population.insert(i, DTWIH_II(instance, i))
         population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
