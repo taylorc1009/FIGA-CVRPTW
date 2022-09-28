@@ -19,7 +19,7 @@ class Vehicle:
     def get_num_of_customers_visited(self) -> int:
         return len(self.destinations) - 2 # like "get_customers_visited", to do this, we assume that every depot departure and return is ordered correctly
 
-    def calculate_destination_time_window(self, instance: ProblemInstance, previous_destination: int, current_destination: int) -> None:
+    def calculate_destination_time_window(self, instance: ProblemInstance, previous_destination: int, current_destination: int) -> bool:
         previous_destination = self.destinations[previous_destination]
         current_destination = self.destinations[current_destination]
         current_destination.arrival_time = previous_destination.departure_time + instance.get_distance(previous_destination.node.number, current_destination.node.number)
@@ -29,10 +29,14 @@ class Vehicle:
         else:
             current_destination.wait_time = 0.0
         current_destination.departure_time = current_destination.arrival_time + current_destination.node.service_duration
+        return current_destination.arrival_time <= current_destination.node.due_date
 
-    def calculate_destinations_time_windows(self, instance: ProblemInstance) -> None:
-        for i in range(1, len(self.destinations)):
-            self.calculate_destination_time_window(instance, i - 1, i)
+    def calculate_destinations_time_windows(self, instance: ProblemInstance, start_from: int=1) -> bool:
+        is_feasible_route = True
+        for i in range(start_from, len(self.destinations)):
+            if not self.calculate_destination_time_window(instance, i - 1, i):
+                is_feasible_route = False
+        return is_feasible_route
 
     def calculate_vehicle_load(self) -> None:
         self.current_capacity = sum(destination.node.demand for destination in self.get_customers_visited())
