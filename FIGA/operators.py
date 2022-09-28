@@ -596,18 +596,19 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
                 first_assigned_cargo, second_assigned_cargo = (0.0,) * 2
             else:
                 if slice_ends == ends_before or max_length in list(subtract(slice_ends, slice_beginnings)):
-                    first_vehicle.destinations[slice_beginnings[0] : slice_ends[0]], second_vehicle.destinations[slice_beginnings[1] : slice_ends[1]] = second_vehicle.destinations[slice_beginnings[1] : slice_ends[1]], first_vehicle.destinations[slice_beginnings[0] : slice_ends[0]]
+                    first_beginning, second_beginning = slice_beginnings
+                    first_end, second_end = slice_ends
+                    first_vehicle.destinations[first_beginning:first_end], second_vehicle.destinations[second_beginning:second_end] = second_vehicle.destinations[second_beginning:second_end], first_vehicle.destinations[first_beginning:first_end]
 
                     first_vehicle.calculate_length_of_route(instance)
                     first_vehicle.calculate_vehicle_load()
-                    second_vehicle.calculate_destinations_time_windows(instance)
+                    first_vehicle.calculate_destinations_time_windows(instance, start_from=first_beginning)
 
                     second_vehicle.calculate_length_of_route(instance)
                     second_vehicle.calculate_vehicle_load()
-                    second_vehicle.calculate_destinations_time_windows(instance)
+                    second_vehicle.calculate_destinations_time_windows(instance, start_from=second_beginning)
 
-                    # print("swapped")
-                    return solution
+                    solution.objective_function(instance)
                 else:
                     # print("continued")
                     continue
