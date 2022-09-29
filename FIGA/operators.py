@@ -1,6 +1,6 @@
 import copy
 from random import shuffle, choice, getrandbits
-from typing import List, Set, Tuple, Union
+from typing import List, Set, Union
 from FIGA.parameters import MUTATION_FEASIBLE_SWAP_PROBABILITY, MUTATION_MAX_SLICE_LENGTH, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY, MUTATION_THREATENED_WINDOW_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
@@ -371,7 +371,7 @@ def TWBLC_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASol
 
     return solution
 
-def find_time_window_threatened_position(solution: FIGASolution) -> Tuple[int, int]:
+"""def find_time_window_threatened_position(solution: FIGASolution) -> Tuple[int, int]:
     worst_route, worst_position, riskiest_difference = None, None, INT_MAX
 
     # find an infeasible route; if none are infeasible, select the destination with the smallest difference between its arrival time and its due date
@@ -408,7 +408,7 @@ def ATBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
     solution.calculate_routes_time_windows(instance)
     solution.objective_function(instance)
 
-    return solution
+    return solution"""
 
 def try_feasible_swap(instance: ProblemInstance, solution: FIGASolution, first_vehicle: Vehicle, second_vehicle: Vehicle) -> None:
     # shuffle(solution.vehicles)
@@ -456,22 +456,16 @@ def try_feasible_reallocation(instance: ProblemInstance, solution: FIGASolution,
     for destination_vehicle in solution.vehicles:
         if destination_vehicle is not random_origin_vehicle and destination_vehicle.current_capacity + random_origin_vehicle.destinations[origin_position].node.demand <= instance.capacity_of_vehicles:
             for destination_position in range(1, destination_vehicle.get_num_of_customers_visited() + 1):
-                distance_from_previous = instance.get_distance(destination_vehicle.destinations[destination_position - 1].node.number, random_origin_vehicle.destinations[origin_position].node.number)
-                
-                simulated_arrival_time = destination_vehicle.destinations[destination_position - 1].departure_time + distance_from_previous
-                if simulated_arrival_time > random_origin_vehicle.destinations[origin_position].node.due_date:
-                    break # break because any subsequent arrival time, after the current destination_position, will always be higher as well
-                if simulated_arrival_time < random_origin_vehicle.destinations[origin_position].node.ready_time:
-                    simulated_arrival_time = random_origin_vehicle.destinations[origin_position].node.ready_time
-                simulated_departure_time = simulated_arrival_time + random_origin_vehicle.destinations[origin_position].node.service_duration
+                destination_vehicle.destinations.insert(destination_position, copy.deepcopy(random_origin_vehicle.destinations[origin_position]))
+                feasible = destination_vehicle.calculate_destinations_time_windows(instance, start_from=destination_position)
 
-                if simulated_departure_time + instance.get_distance(random_origin_vehicle.destinations[origin_position].node.number, destination_vehicle.destinations[destination_position].node.number) < destination_vehicle.destinations[destination_position].node.due_date and destination_vehicle.current_capacity + random_origin_vehicle.destinations[origin_position].node.demand < instance.capacity_of_vehicles:
-                    destination_vehicle.destinations.insert(destination_position, random_origin_vehicle.destinations.pop(origin_position))
-
+                if feasible:
+                    random_origin_vehicle.destinations.pop(origin_position)
                     destination_vehicle.current_capacity += destination_vehicle.destinations[destination_position].node.demand
-                    destination_vehicle.calculate_destinations_time_windows(instance, start_from=destination_position)
-
                     return True
+                else:
+                    destination_vehicle.destinations.pop(destination_position)
+                    destination_vehicle.calculate_destinations_time_windows(instance, start_from=destination_position)
     return False
 
 def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Vehicle Elimination Mutator
