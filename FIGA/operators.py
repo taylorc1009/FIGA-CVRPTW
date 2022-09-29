@@ -508,7 +508,6 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
             if feasible and first_vehicle_capacity <= instance.capacity_of_vehicles and second_vehicle_capacity <= instance.capacity_of_vehicles:
                 slice_beginnings, slice_ends = ((d1, d2),) * 2
                 first_vehicle.current_capacity, second_vehicle.current_capacity = first_vehicle_capacity, second_vehicle_capacity
-                # print("beginnings: ", str(slice_beginnings))
             swap(instance, first_vehicle, d1, d2, vehicle_two=second_vehicle)
         else:
             ends_before = slice_ends
@@ -516,29 +515,28 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
             first_vehicle.destinations[first_beginning:d1 + 1], second_vehicle.destinations[second_beginning:d2 + 1] = second_vehicle.destinations[second_beginning:d2 + 1], first_vehicle.destinations[first_beginning:d1 + 1]
             first_feasibility, second_feasibility = first_vehicle.calculate_destinations_time_windows(instance, start_from=first_beginning), second_vehicle.calculate_destinations_time_windows(instance, start_from=second_beginning)
             
+            # TODO: test whether or not the ".node.number" checks allow the mutator to increment d1/d2 higher than the number of destinations in the other increment's route (which should then terminate when d1 == first_num_destinations and d2 == second_num_destinations)
             if first_feasibility and second_feasibility and first_vehicle_capacity <= instance.capacity_of_vehicles and second_vehicle_capacity <= instance.capacity_of_vehicles:
                 slice_ends = (d1, d2)
                 d1 += 1
                 d2 += 1
-            elif first_feasibility and not second_feasibility and first_vehicle_capacity + first_destination.node.demand <= instance.capacity_of_vehicles:
+            elif first_feasibility and not second_feasibility and first_vehicle_capacity + first_destination.node.demand <= instance.capacity_of_vehicles and first_vehicle.destinations[first_beginning + ((d2 + 1) - second_beginning)].node.number:
                 slice_ends = (slice_ends[0], d2)
                 d2 += 1
                 first_vehicle_capacity += first_destination.node.demand
                 second_vehicle_capacity -= first_destination.node.demand
-            elif second_feasibility and not first_feasibility and second_vehicle_capacity + second_destination.node.demand <= instance.capacity_of_vehicles:
+            elif second_feasibility and not first_feasibility and second_vehicle_capacity + second_destination.node.demand <= instance.capacity_of_vehicles and second_vehicle.destinations[second_beginning + ((d1 + 1) - first_beginning)].node.number:
                 slice_ends = (d1, slice_ends[1])
                 d1 += 1
                 second_vehicle_capacity += second_destination.node.demand
                 first_vehicle_capacity -= second_destination.node.demand
 
             first_end, second_end = slice_ends
-            d1_inclusive, d2_inclusive = int(not slice_ends[0] > ends_before[0]), int(not slice_ends[1] > ends_before[1])
-            first_vehicle.destinations[first_beginning:first_beginning + ((d2 + d2_inclusive) - second_beginning)], second_vehicle.destinations[second_beginning:second_beginning + ((d1 + d1_inclusive) - first_beginning)] = second_vehicle.destinations[second_beginning:second_beginning + ((d1 + d1_inclusive) - first_beginning)], first_vehicle.destinations[first_beginning:first_beginning + ((d2 + d2_inclusive) - second_beginning)]
+            d1_inclusion, d2_inclusion = int(not slice_ends[0] > ends_before[0]), int(not slice_ends[1] > ends_before[1])
+            first_temp_end, second_temp_end = first_beginning + ((d2 + d2_inclusion) - second_beginning), second_beginning + ((d1 + d1_inclusion) - first_beginning)
+            first_vehicle.destinations[first_beginning:first_temp_end], second_vehicle.destinations[second_beginning:second_temp_end] = second_vehicle.destinations[second_beginning:second_temp_end], first_vehicle.destinations[first_beginning:first_temp_end]
 
-            # print("ends: ", str(slice_ends), ", d1 & d2:", d1, d2)
             if slice_ends == slice_beginnings:
-                # print("slice reset,  tuples: ", str(slice_beginnings), str(slice_ends))
-
                 first_vehicle.calculate_length_of_route(instance)
                 first_vehicle.calculate_vehicle_load()
                 first_vehicle.calculate_destinations_time_windows(instance, start_from=first_beginning)
@@ -549,25 +547,19 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
 
                 slice_beginnings, slice_ends = (None,) * 2
             else:
-                if slice_ends == ends_before or max_length in set(subtract(slice_ends, slice_beginnings)) or (not slice_ends == ends_before and (d1 == first_num_destinations + 1 or d2 == second_num_destinations + 1)):
+                if slice_ends == ends_before or max_length in set(subtract(slice_ends, slice_beginnings)) or (not slice_ends == ends_before and d1 == first_num_destinations + 1 and d2 == second_num_destinations + 1):
                     first_vehicle.destinations[first_beginning:first_end + 1], second_vehicle.destinations[second_beginning:second_end + 1] = second_vehicle.destinations[second_beginning:second_end + 1], first_vehicle.destinations[first_beginning:first_end + 1]
-                    try:
-                        solution.check_format_is_correct(instance)
-                    except:
-                        pass
+
                     first_vehicle.calculate_length_of_route(instance)
                     first_vehicle.calculate_vehicle_load()
                     second_vehicle.calculate_length_of_route(instance)
                     second_vehicle.calculate_vehicle_load()
                     solution.objective_function(instance)
 
-                    # print("swapped")
                     return solution
                 else:
-                    # print("continued")
                     first_vehicle.current_capacity, second_vehicle.current_capacity = first_vehicle_capacity, second_vehicle_capacity
                     continue
-        # print("incremented")
         if increment_switch or slice_beginnings:
             d1 += 1
         if not increment_switch or slice_beginnings:
