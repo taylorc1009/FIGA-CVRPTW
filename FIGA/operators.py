@@ -87,7 +87,7 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
         #     else (best_vehicle_by_distance, best_position_by_distance)
 
         if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and best_vehicle is None:
-            best_vehicle = len(crossover_solution.vehicles)
+            best_vehicle, best_position = len(crossover_solution.vehicles), 1
             crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
         else:
             # best_vehicle and best_position will equal the insertion position before the vehicle with the longest wait time
@@ -137,7 +137,7 @@ def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_tw
         if feasible_locations:
             best_vehicle, best_position = choice(feasible_locations)
         if not feasible_locations and len(crossover_solution.vehicles) < instance.amount_of_vehicles and best_vehicle is None:
-            best_vehicle = len(crossover_solution.vehicles)
+            best_vehicle, best_position = len(crossover_solution.vehicles), 1
             crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
         else:
             # best_vehicle and best_position will equal the insertion position before the vehicle with the longest wait time
