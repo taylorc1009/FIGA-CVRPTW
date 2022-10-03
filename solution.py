@@ -20,16 +20,16 @@ class Solution(ABC):
         self.rank: int=int(rank)
 
     def calculate_routes_time_windows(self, instance: ProblemInstance) -> None:
-        for i, _ in enumerate(self.vehicles):
-            self.vehicles[i].calculate_destinations_time_windows(instance)
+        for vehicle in self.vehicles:
+            vehicle.calculate_destinations_time_windows(instance)
 
     def calculate_vehicles_loads(self) -> None:
-        for i, _ in enumerate(self.vehicles):
-            self.vehicles[i].calculate_vehicle_load()
+        for vehicle in self.vehicles:
+            vehicle.calculate_vehicle_load()
 
     def calculate_length_of_routes(self, instance: ProblemInstance) -> None:
-        for i, _ in enumerate(self.vehicles):
-            self.vehicles[i].calculate_length_of_route(instance)
+        for vehicle in self.vehicles:
+            vehicle.calculate_length_of_route(instance)
 
     def check_format_is_correct(self, instance: ProblemInstance) -> None:
         node_nums = set(range(1, 101))
