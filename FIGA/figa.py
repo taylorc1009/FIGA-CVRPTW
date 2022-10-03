@@ -213,7 +213,7 @@ def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, 
         return crossover_solution, crossover
     return parent_one, None
 
-def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int, temperature_max: float, temperature_min: float) -> Tuple[FIGASolution, Union[int, None]]:
+def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int, temperature_min: float) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < mutation_probability:
         global mutation_invocations, mutation_acceptances
         mutation_invocations += 1
