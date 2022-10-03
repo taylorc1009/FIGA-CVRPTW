@@ -342,7 +342,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                 check_nondominated_set_acceptance(nondominated_set, child)
             mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_max, temperature_min)
+                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_min)
                 if mutator:
                     check_nondominated_set_acceptance(nondominated_set, child)
                 mutations.append(mutator)
