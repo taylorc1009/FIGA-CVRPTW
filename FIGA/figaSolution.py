@@ -18,7 +18,7 @@ class FIGASolution(Solution):
     def __nullify(self) -> None:
         self.feasible = False
         self.total_distance = float(INFINITY)
-        self.num_vehicles = float(INFINITY)
+        self.num_vehicles = INFINITY
 
     def objective_function(self, instance: ProblemInstance) -> None:
         if len(self.vehicles) > instance.amount_of_vehicles:

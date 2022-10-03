@@ -9,13 +9,13 @@ from destination import Destination
 from node import Node
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBS_mutation, DBT_mutation, DBS_mutation, TWBMF_mutation, TWBPB_mutation, ES_crossover, VE_mutation
+from FIGA.operators import FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBR_mutation, TWBS_mutation, DBT_mutation, DBS_mutation, ES_crossover, VE_mutation
 from FIGA.parameters import ES_CROSSOVER_MAX_VEHICLES, FBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
 from vehicle import Vehicle
 from numpy import ceil, random
 
 # operators' statistics
-initialiser_execution_time: int=0
+initialiser_execution_time: float=0.0
 feasible_initialisations: int=0
 crossover_invocations: int=0
 crossover_acceptances: Dict[int, int]={}
@@ -219,28 +219,26 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(1 if solution.temperature > temperature_min else 4, 10)
+        mutator = rand(1 if solution.temperature > temperature_min else 3, 9)
 
         match mutator:
             case 1:
                 mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
             case 2:
-                mutated_solution = TWBMF_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
+                mutated_solution = TWBR_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
             case 3:
-                mutated_solution = TWBPB_mutation(instance, mutated_solution) # Time-Window-based Push-back Mutator
-            case 4:
                 mutated_solution = PBS_mutator(instance, mutated_solution) # Partition-based Swap Mutator
-            case 5:
+            case 4:
                 mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+            case 5:
+                mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
             case 6:
                 mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
             case 7:
-                mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
-            case 8:
                 mutated_solution = VE_mutation(instance, mutated_solution) # Vehicle Elimination Mutator
-            case 9:
+            case 8:
                 mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
-            case 10:
+            case 9:
                 mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
         """case 11:
             mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time Based Reorder Mutator"""
