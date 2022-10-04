@@ -495,8 +495,6 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
     first_num_destinations, second_num_destinations = first_vehicle.get_num_of_customers_visited(), second_vehicle.get_num_of_customers_visited()
 
     while d1 < first_num_destinations or d2 < second_num_destinations:
-        first_destination, second_destination = first_vehicle.destinations[d1], second_vehicle.destinations[d2]
-
         if not slice_beginnings:
             if swap(instance, first_vehicle, d1, d2, vehicle_two=second_vehicle):
                 slice_beginnings, slice_ends = ((d1, d2),) * 2
@@ -510,16 +508,31 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
             first_vehicle.calculate_vehicle_load()
             second_vehicle.calculate_vehicle_load()
             
+            first_temp_end, second_temp_end = first_beginning + ((d2 + 1) - second_beginning), second_beginning + ((d1 + 1) - first_beginning)
             if first_feasibility and second_feasibility and first_vehicle.current_capacity <= instance.capacity_of_vehicles and second_vehicle.current_capacity <= instance.capacity_of_vehicles and d1 < first_num_destinations and d2 < second_num_destinations:
                 slice_ends = (d1, d2)
                 d1 += 1
                 d2 += 1
-            elif first_feasibility and not second_feasibility and first_vehicle.current_capacity + first_destination.node.demand <= instance.capacity_of_vehicles and d2 < second_num_destinations:
-                slice_ends = (slice_ends[0], d2)
-                d2 += 1
-            elif second_feasibility and not first_feasibility and second_vehicle.current_capacity + second_destination.node.demand <= instance.capacity_of_vehicles and d1 < first_num_destinations:
-                slice_ends = (d1, slice_ends[1])
-                d1 += 1
+            elif first_feasibility and not second_feasibility:
+                second_temp_end -= 1
+                first_vehicle.destinations.insert(first_temp_end, second_vehicle.destinations.pop(second_temp_end))
+                first_feasibility, second_feasibility = first_vehicle.calculate_destinations_time_windows(instance, start_from=first_beginning), second_vehicle.calculate_destinations_time_windows(instance, start_from=second_beginning)
+                first_vehicle.calculate_vehicle_load()
+                second_vehicle.calculate_vehicle_load()
+
+                if first_feasibility and second_feasibility and first_vehicle.current_capacity <= instance.capacity_of_vehicles and second_vehicle.current_capacity <= instance.capacity_of_vehicles and d2 < second_num_destinations:
+                    slice_ends = (slice_ends[0], d2)
+                    d2 += 1
+            elif second_feasibility and not first_feasibility:
+                first_temp_end -= 1
+                second_vehicle.destinations.insert(second_temp_end, first_vehicle.destinations.pop(first_temp_end))
+                first_feasibility, second_feasibility = first_vehicle.calculate_destinations_time_windows(instance, start_from=first_beginning), second_vehicle.calculate_destinations_time_windows(instance, start_from=second_beginning)
+                first_vehicle.calculate_vehicle_load()
+                second_vehicle.calculate_vehicle_load()
+
+                if first_feasibility and second_feasibility and first_vehicle.current_capacity <= instance.capacity_of_vehicles and second_vehicle.current_capacity <= instance.capacity_of_vehicles and d1 < first_num_destinations:
+                    slice_ends = (d1, slice_ends[1])
+                    d1 += 1
 
             if slice_ends != slice_beginnings and (slice_ends == ends_before or max_length in set(subtract(slice_ends, slice_beginnings)) or (not slice_ends == ends_before and d1 == first_num_destinations + 1 and d2 == second_num_destinations + 1)):
                 first_vehicle.calculate_length_of_route(instance)
@@ -527,7 +540,6 @@ def PBS_mutator(instance: ProblemInstance, solution: FIGASolution) -> FIGASoluti
                 solution.objective_function(instance)
                 return solution
             else:
-                first_temp_end, second_temp_end = first_beginning + ((d2 + int(not slice_ends[1] > ends_before[1])) - second_beginning), second_beginning + ((d1 + int(not slice_ends[0] > ends_before[0])) - first_beginning)
                 first_vehicle.destinations[first_beginning:first_temp_end], second_vehicle.destinations[second_beginning:second_temp_end] = second_vehicle.destinations[second_beginning:second_temp_end], first_vehicle.destinations[first_beginning:first_temp_end]
 
                 first_vehicle.calculate_vehicle_load()
