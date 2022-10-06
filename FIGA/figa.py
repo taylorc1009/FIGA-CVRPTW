@@ -157,7 +157,7 @@ def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGAS
     i = 0
     while i < len(solution.vehicles) and len(solution.vehicles) < instance.amount_of_vehicles:
         if solution.vehicles[i].get_num_of_customers_visited() >= 2:
-            for j, destination in enumerate(solution.vehicles[i].get_customers_visited()[2:], 2):
+            for j, destination in enumerate(solution.vehicles[i].get_customers_visited()[1:], 2):
                 if destination.arrival_time > destination.node.due_date:
                     solution.vehicles.insert(i + 1, Vehicle.create_route(instance, solution.vehicles[i].destinations[j:-1]))
                     del solution.vehicles[i].destinations[j:-1]
