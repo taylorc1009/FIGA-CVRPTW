@@ -1,6 +1,7 @@
 import copy
 from typing import List, Dict
 from constants import INT_MAX
+from MMOEASA.constants import INFINITY
 from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from solution import Solution
@@ -11,12 +12,12 @@ class OmbukiSolution(Solution):
         self.num_vehicles: int=int(num_vehicles) # the reason this objective is a variable instead of just using "len(vehicles)" is because if the solution is invalid, it needs to be set to a very high number
 
     def __str__(self) -> str:
-        return f"total_distance={self.total_distance}, num_vehicles={self.num_vehicles}, {[f'{i}. {str(v)}' for i, v in enumerate(self.vehicles)]}"
+        return f"total_distance={self.total_distance}, num_vehicles={self.num_vehicles}, {len(self.vehicles)=}, {[f'{i}. {str(v)}' for i, v in enumerate(self.vehicles)]}"
 
     def __nullify(self) -> None:
         self.feasible = False
-        self.total_distance = float(INT_MAX)
-        self.num_vehicles = INT_MAX
+        self.total_distance = float(INFINITY)
+        self.num_vehicles = INFINITY
 
     def objective_function(self, instance: ProblemInstance) -> None:
         if len(self.vehicles) > instance.amount_of_vehicles:

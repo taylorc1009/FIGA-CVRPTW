@@ -174,7 +174,7 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
                 crossover_occurred = solution_copy is not solution # if the copy is equal to the original solution, this means that no copy happened and, therefore, crossover did not occur
                 mutations = 0
                 for _ in range(0, rand(1, MAX_SIMULTANEOUS_MUTATIONS)): # MMOEASA can perform up to three mutations in a single generation
-                    solution_copy, mutation_occurred = mutation(instance, solution_copy, mutation_probability, solution_copy is solution)
+                    solution_copy, mutation_occurred = mutation(instance, mo_metropolis(instance, solution, solution_copy, solution.temperature, is_nondominated if instance.acceptance_criterion == "MMOEASA" else ombuki_is_nondominated), mutation_probability, solution_copy is solution)
                     if mutation_occurred:
                         mutations += 1
 
