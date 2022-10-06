@@ -63,14 +63,6 @@ metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0}
 
     return solution"""
 
-def fast_feasible_point_check(instance: ProblemInstance, vehicle: Vehicle, destination_index: int, node: Node):
-    vehicle.current_capacity += node.demand
-    for i in range(destination_index, len(vehicle.destinations)):
-        vehicle.calculate_destination_time_window(instance, i - 1, i)
-        if vehicle.destinations[i].arrival_time > vehicle.destinations[i].node.due_date:
-            return False
-    return True
-
 def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
     range_of_sorted_nodes = int(ceil((len(instance.nodes) - 1) / 10))
@@ -107,26 +99,24 @@ def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
                 else:
                     longest_wait_time, longest_waiting_point = 0.0, (0, 0)
                     for v, vehicle in enumerate(solution.vehicles):
-                        if vehicle.current_capacity + node.demand > instance.capacity_of_vehicles:
-                            for d in range(1, len(vehicle.destinations) - 1):
+                        if vehicle.current_capacity + node.demand <= instance.capacity_of_vehicles:
+                            for d, destination in enumerate(vehicle.get_customers_visited(), 1):
                                 vehicle.destinations.insert(d, new_destination)
-                                if fast_feasible_point_check(instance, vehicle, d, node):
+                                if vehicle.calculate_destinations_time_windows(instance, start_from=d):
+                                    vehicle.current_capacity += node.demand
                                     inserted = True
                                     break
                                 else:
-                                    del vehicle.destinations[d]
-                                    for i in range(d, len(vehicle.destinations)):
-                                        vehicle.calculate_destination_time_window(instance, i - 1, i)
-                                    if vehicle.destinations[d].wait_time > longest_wait_time:
-                                        longest_wait_time, longest_waiting_point = vehicle.destinations[d].wait_time, (v, d)
+                                    vehicle.destinations.pop(d)
+                                    vehicle.calculate_destinations_time_windows(instance, start_from=d)
+                                    if destination.wait_time > longest_wait_time:
+                                        longest_wait_time, longest_waiting_point = destination.wait_time, (v, d)
                             if inserted:
                                 break
                     if not inserted:
                         v, d = longest_waiting_point
-                        solution.vehicles[v].destinations.insert(d - 1, new_destination)
-                        solution.vehicles[v].current_capacity += node.demand
-                        for i in range(d - 1, len(solution.vehicles[v].destinations)):
-                            solution.vehicles[v].calculate_destination_time_window(instance, i - 1, i)
+                        solution.vehicles[v].destinations.insert(d, new_destination)
+                        solution.vehicles[v].calculate_destinations_time_windows(instance, start_from=d)
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
 
     solution.calculate_length_of_routes(instance)
