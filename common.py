@@ -45,7 +45,8 @@ def output_status_seconds(nondominated_set_length: int, population: List[Solutio
     unique_solutions, average_similarity = evaluate_population(population)
     population_str = ""
     for solution in population:
-        population_str += f" - {solution.total_distance},{solution.num_vehicles}\n" if solution.feasible else f" - {str(solution)}\n"
+        bullet = "-" if solution.feasible else "!"
+        population_str += f" {bullet} {solution.total_distance},{len(solution.vehicles)}\n"
     print(f"time_taken={round(time_taken, 1)}s, {nondominated_set_length=}, {unique_solutions=}, {average_similarity=}%, \n{population_str}")
 
 def check_seconds_termination_condition(start: float, termination_condition: int, nondominated_set_length: int, population: List[Solution], progress_indication_steps: Deque[float]) -> bool:
