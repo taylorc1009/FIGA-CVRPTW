@@ -131,7 +131,6 @@ def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
 
     solution.calculate_length_of_routes(instance)
     solution.objective_function(instance)
-    solution.check_format_is_correct(instance)
 
     return solution
 
@@ -166,24 +165,23 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
 
 def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
     i = 0
-
     while i < len(solution.vehicles) and len(solution.vehicles) < instance.amount_of_vehicles:
-        for j, destination in enumerate(solution.vehicles[i].get_customers_visited(), 1):
-            if destination.arrival_time > destination.node.due_date:
-                solution.vehicles.insert(i + 1, Vehicle.create_route(instance, solution.vehicles[i].destinations[j:-1]))
-                del solution.vehicles[i].destinations[j:-1]
+        if solution.vehicles[i].get_num_of_customers_visited() >= 2:
+            for j, destination in enumerate(solution.vehicles[i].get_customers_visited()[2:], 2):
+                if destination.arrival_time > destination.node.due_date:
+                    solution.vehicles.insert(i + 1, Vehicle.create_route(instance, solution.vehicles[i].destinations[j:-1]))
+                    del solution.vehicles[i].destinations[j:-1]
 
-                solution.vehicles[i].calculate_vehicle_load()
-                solution.vehicles[i].calculate_length_of_route(instance)
-                solution.vehicles[i].calculate_destination_time_window(instance, j - 1, j)
+                    solution.vehicles[i].calculate_vehicle_load()
+                    solution.vehicles[i].calculate_length_of_route(instance)
+                    solution.vehicles[i].calculate_destination_time_window(instance, j - 1, j)
 
-                solution.vehicles[i + 1].calculate_vehicle_load()
-                solution.vehicles[i + 1].calculate_length_of_route(instance)
-                solution.vehicles[i + 1].calculate_destinations_time_windows(instance)
+                    solution.vehicles[i + 1].calculate_vehicle_load()
+                    solution.vehicles[i + 1].calculate_length_of_route(instance)
+                    solution.vehicles[i + 1].calculate_destinations_time_windows(instance)
 
-                break
+                    break
         i += 1
-
     solution.objective_function(instance)
 
 def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None) -> FIGASolution:
@@ -193,17 +191,17 @@ def selection_tournament(nondominated_set: List[FIGASolution], population: List[
         return random.choice(list(filter(lambda s: s is not exclude_solution, subject_list)))
     return random.choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
 
-def try_crossover(instance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
+def try_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < crossover_probability:
         global crossover_invocations, crossover_acceptances
         crossover_invocations += 1
 
         crossover_solution = None
-        crossover = rand(1, 3)
+        crossover = rand(1 if len(parent_one.vehicles) < instance.amount_of_vehicles else 2, 3)
 
         match crossover:
             case 1:
-                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(ES_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
+                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min([ES_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1, instance.amount_of_vehicles - len(parent_one.vehicles)]))))
             case 2:
                 crossover_solution = SBCR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(SBRC_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
             case _: # this crossover has a higher chance of occurring
