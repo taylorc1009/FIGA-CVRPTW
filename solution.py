@@ -34,7 +34,9 @@ class Solution(ABC):
     def check_format_is_correct(self, instance: ProblemInstance) -> None:
         node_nums = set(range(1, 101))
         # error checks to ensure that every route is of the valid format
-        if sum(v.get_num_of_customers_visited() for v in self.vehicles) != len(instance.nodes) - 1: # check if the solution contains the correct amount of destinations, in that it visits all of them (this will also find depot returns mid route)
+        if len(self.vehicles) > instance.amount_of_vehicles:
+            raise ValueError(f"Too many vehicles: {len(self.vehicles)}")
+        elif sum(v.get_num_of_customers_visited() for v in self.vehicles) != len(instance.nodes) - 1: # check if the solution contains the correct amount of destinations, in that it visits all of them (this will also find depot returns mid route)
             raise ValueError(f"Mismatched amount of destinations: {sum(v.get_num_of_customers_visited() for v in self.vehicles)}")
         elif [v for v in self.vehicles if len(v.destinations) < 3]: # checks if all the routes have at least 3 destinations; routes should always at least depart from and return to the depot, while visiting a customer inbetween
             raise ValueError(f"Number of destinations is not at least 3 in the following vehicle(s): {str([i for i, v in enumerate(self.vehicles) if len(v.destinations) < 3])}")
