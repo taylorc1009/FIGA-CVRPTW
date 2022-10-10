@@ -10,6 +10,7 @@ from vehicle import Vehicle
 from destination import Destination
 from Ombuki.auxiliaries import is_nondominated, mmoeasa_is_nondominated, get_nondominated_set
 from numpy import arange, round, random
+from random import choice, sample
 from Ombuki.constants import TOURNAMENT_SET_SIZE, TOURNAMENT_PROBABILITY_SELECT_BEST, GREEDY_PERCENT
 from constants import INT_MAX
 from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
@@ -54,7 +55,7 @@ def generate_greedy_solution(instance: ProblemInstance) -> Union[OmbukiSolution,
     vehicle = 0
 
     while unvisited_nodes:
-        node = instance.nodes[random.choice(unvisited_nodes)]
+        node = instance.nodes[choice(unvisited_nodes)]
         solution.vehicles[vehicle].destinations.insert(len(solution.vehicles[vehicle].destinations) - 1, Destination(node=node)) # first, insert the randomly selected vehicle to start a greedy search from
         solution.vehicles[vehicle].current_capacity = node.demand
         unvisited_nodes.remove(node.number) # the randomly chosen node was inserted, so it can be removed from the unvisited nodes
@@ -247,24 +248,24 @@ def routing_scheme(instance: ProblemInstance, solution: Union[OmbukiSolution, MM
         return relocated_solution if not transformed_solution.feasible or (relocated_solution.total_distance < transformed_solution.total_distance and relocated_solution.cargo_unbalance < transformed_solution.cargo_unbalance) else transformed_solution
     return relocated_solution if not transformed_solution.feasible or (relocated_solution.total_distance < transformed_solution.total_distance and relocated_solution.num_vehicles < transformed_solution.num_vehicles) else transformed_solution
 
-def selection_tournament(instance: ProblemInstance, population: List[Union[OmbukiSolution, MMOEASASolution]]) -> Union[OmbukiSolution, MMOEASASolution]:
+def selection_tournament(instance: ProblemInstance, population: List[Union[OmbukiSolution, MMOEASASolution]], exclude_solution: Union[OmbukiSolution, MMOEASASolution]=None) -> Union[OmbukiSolution, MMOEASASolution]:
     best_solutions = list(filter(lambda s: s.rank == 1, population))
-    if best_solutions:
-        tournament_set = random.choice(best_solutions, TOURNAMENT_SET_SIZE)
-    else: # in this instance, there are no feasible (and therefore, rank 1) solutions, so work with the entire population instead
-        tournament_set = random.choice(population, TOURNAMENT_SET_SIZE)
+    tournament_set = sample(best_solutions, TOURNAMENT_SET_SIZE) if best_solutions else sample(population, TOURNAMENT_SET_SIZE) # in the else instance, there are no feasible (and therefore, rank 1) solutions, so work with the entire population instead
+    if exclude_solution:
+        tournament_set = list(filter(lambda s: s is not exclude_solution, tournament_set))
 
     if rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST: # probability of selecting the best solution in the tournament set to be returned ...
-        best_solution = population[tournament_set[0].id]
-        for solution in tournament_set: # find the non-dominated solution of the 4 chosen solutions, for it to be returned
-            if instance.acceptance_criterion == "MMOEASA":
-                if mmoeasa_is_nondominated(best_solution, population[solution.id]):
-                    best_solution = population[solution.id]
-            elif is_nondominated(best_solution, population[solution.id]):
-                best_solution = population[solution.id]
+        best_solution = tournament_set[0]
+        for solution in tournament_set[1:]: # find the non-dominated solution of the 4 chosen solutions, for it to be returned
+            if solution is not exclude_solution:
+                if instance.acceptance_criterion == "MMOEASA":
+                    if mmoeasa_is_nondominated(best_solution, population[solution.id]):
+                        best_solution = solution
+                elif is_nondominated(best_solution, population[solution.id]):
+                    best_solution = solution
         return best_solution
-    else: # ... otherwise, return a random solution of the torurnament set
-        return tournament_set[rand(0, TOURNAMENT_SET_SIZE - 1)]
+    else: # ... otherwise, return a random solution of the tournament set
+        return choice(tournament_set)
 
 def crossover_probability(instance: ProblemInstance, iterator_parent: Union[OmbukiSolution, MMOEASASolution], tournament_parent: Union[OmbukiSolution, MMOEASASolution], probability: int, use_original: bool) -> Union[OmbukiSolution, MMOEASASolution]:
     if rand(1, 100) < probability:
@@ -339,7 +340,7 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
         winning_parent = selection_tournament(instance, population)
         thread_pool = []
         for i in range(len(population)):
-            thread_pool.append(Thread(target=genetic_operations_thread, args=(instance, population, i, winning_parent, crossover, mutation, use_original_operators)))
+            thread_pool.append(Thread(target=genetic_operations_thread, args=(instance, population, i, winning_parent if population[i] is not winning_parent else selection_tournament(instance, population, exclude_solution=winning_parent), crossover, mutation, use_original_operators)))
             thread_pool[-1].start()
         for thread in thread_pool:
             thread.join()
