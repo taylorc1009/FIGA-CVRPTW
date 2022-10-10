@@ -1,6 +1,6 @@
 import copy
-from random import shuffle
-from typing import Dict, List, Union
+from random import choice, shuffle
+from typing import Dict, Union
 from Ombuki.constants import MUTATION_REVERSAL_LENGTH
 from Ombuki.auxiliaries import is_nondominated, mmoeasa_is_nondominated
 from Ombuki.ombukiSolution import OmbukiSolution
@@ -153,7 +153,7 @@ def crossover(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEA
         return thread_results["child_one"] if mmoeasa_is_nondominated(thread_results["child_one"], thread_results["child_two"]) else thread_results["child_two"]
     return thread_results["child_one"] if is_nondominated(thread_results["child_one"], thread_results["child_two"]) else thread_results["child_two"]
 
-def get_next_vehicles_destinations(solution: Union[OmbukiSolution, MMOEASASolution], vehicle: int, first_destination: int, remaining_destinations: int) -> List[Destination]:
+"""def get_next_vehicles_destinations(solution: Union[OmbukiSolution, MMOEASASolution], vehicle: int, first_destination: int, remaining_destinations: int) -> List[Destination]:
     if not remaining_destinations: # if the amount of destinations left to acquire is equal to zero, then return an empty list
         return list()
     num_customers = solution.vehicles[vehicle].get_num_of_customers_visited()
@@ -201,4 +201,17 @@ def mutation(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASAS
     solution.vehicles[vehicle_num].calculate_destinations_time_windows(instance)
     solution.vehicles[vehicle_num].calculate_length_of_route(instance)
     solution.objective_function(instance)
+    return solution"""
+
+def mutation(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution]) -> Union[OmbukiSolution, MMOEASASolution]:
+    num_nodes_to_swap = rand(2, MUTATION_REVERSAL_LENGTH)
+    vehicle = choice(list(filter(lambda v: v.get_num_of_customers_visited() >= num_nodes_to_swap, solution.vehicles)))
+    first_reversal_node = rand(1, vehicle.get_num_of_customers_visited() - (num_nodes_to_swap - 1))
+
+    vehicle.destinations[first_reversal_node : first_reversal_node + num_nodes_to_swap] = list(reversed(vehicle.destinations[first_reversal_node : first_reversal_node + num_nodes_to_swap]))
+
+    vehicle.calculate_destinations_time_windows(instance, start_from=first_reversal_node)
+    vehicle.calculate_length_of_route(instance)
+    solution.objective_function(instance)
+
     return solution
