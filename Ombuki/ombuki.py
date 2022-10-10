@@ -292,21 +292,6 @@ def mutation_probability(instance: ProblemInstance, solution: Union[OmbukiSoluti
             return mutated_solution
     return solution
 
-def genetic_operations_thread(instance: ProblemInstance, population: List[Union[OmbukiSolution, MMOEASASolution]], parent: int, tournament_parent: Union[OmbukiSolution, MMOEASASolution], crossover: int, mutation: int, use_original_operators: bool) -> None:
-    if not population[parent].feasible: # the routing scheme is likely destructive of good solutions and will have no effect on feasible solutions, so only execute it on infeasible solutions
-        population[parent] = routing_scheme(instance, population[parent], use_original_operators)
-
-    result = crossover_probability(instance, population[parent], tournament_parent, crossover, use_original_operators)
-    result = mutation_probability(instance, result, mutation, result is population[parent])
-
-    if not population[parent].feasible: # always overwrite the parent if it is infeasible as there's no other way to determine if the child should be accepted, and we don't want to keep infeasible solutions
-        population[parent] = result
-    elif result.feasible: # if the child is feasible then try and accept it into the population
-        if instance.acceptance_criterion == "MMOEASA":
-            population[parent] = mo_metropolis(instance, population[parent], result, 100.0)
-        elif is_nondominated(population[parent], result):
-            population[parent] = result
-
 def Ombuki(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover: int, mutation: int, use_original_operators: bool, progress_indication_steps: Deque[float]) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
     population: List[Union[OmbukiSolution, MMOEASASolution]] = list()
 
@@ -330,12 +315,21 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
     iterations = 0
     while not terminate:
         winning_parent = selection_tournament(instance, population)
-        thread_pool = []
-        for i in range(len(population)):
-            thread_pool.append(Thread(target=genetic_operations_thread, args=(instance, population, i, winning_parent if population[i] is not winning_parent else selection_tournament(instance, population, exclude_solution=winning_parent), crossover, mutation, use_original_operators)))
-            thread_pool[-1].start()
-        for thread in thread_pool:
-            thread.join()
+
+        for i, solution in enumerate(population):
+            if not solution.feasible: # the routing scheme is likely destructive of good solutions and will have no effect on feasible solutions, so only execute it on infeasible solutions
+                population[i] = routing_scheme(instance, solution, use_original_operators)
+
+            result = crossover_probability(instance, solution, winning_parent, crossover, use_original_operators)
+            result = mutation_probability(instance, result, mutation, result is solution)
+
+            if not solution.feasible: # always overwrite the parent if it is infeasible as there's no other way to determine if the child should be accepted, and we don't want to keep infeasible solutions
+                population[i] = result
+            elif result.feasible: # if the child is feasible then try and accept it into the population
+                if instance.acceptance_criterion == "MMOEASA":
+                    population[i] = mo_metropolis(instance, solution, result, 100.0)
+                elif is_nondominated(solution, result):
+                    population[i] = result
         num_rank_ones = pareto_rank(instance, population)
         iterations += 1
 
