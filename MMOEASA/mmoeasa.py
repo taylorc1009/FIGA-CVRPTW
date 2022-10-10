@@ -1,4 +1,5 @@
 import copy
+from random import getrandbits
 from time import process_time
 from itertools import islice
 from MMOEASA.auxiliaries import is_nondominated, ombuki_is_nondominated, check_nondominated_set_acceptance
@@ -169,7 +170,7 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
 
         while population[0].temperature > temperature_stop and not terminate:
             for s, solution in enumerate(population):
-                selection_tournament = rand(0, 1) if nondominated_set else 0 # determines whether to use the non-dominated set to get the second crossover parent
+                selection_tournament = bool(getrandbits(1)) # determines whether to use the non-dominated set to get the second crossover parent
                 solution_copy = crossover(instance, solution, nondominated_set if selection_tournament else population, crossover_probability, not not selection_tournament)
                 crossover_occurred = solution_copy is not solution # if the copy is equal to the original solution, this means that no copy happened and, therefore, crossover did not occur
                 mutations = 0
