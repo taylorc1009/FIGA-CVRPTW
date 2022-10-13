@@ -332,10 +332,8 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         d_df = euclidean_distance_dispersion(instance, child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
         # the new calculation in the "else" clause reduces the probability of accepting duplicate solutions from being recorded at a low temperature, and vice versa for high temperatures
-        #mantissa_length = len(str(temperature_stop).split(".")[0]) - 1
-        #base = (temperature_max / 10 ** mantissa_length) - (temperature / 10 ** mantissa_length)
-        d_pt_pt = d_df / temperature ** 2#(2 if not duplicate else 2 + (log(base) if base else 0))
-        d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
+        d_pt_pt = d_df / temperature ** 2
+        d_exp = exp(-1.0 * d_pt_pt)
 
         if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
             metropolis_returns[3] += 1
