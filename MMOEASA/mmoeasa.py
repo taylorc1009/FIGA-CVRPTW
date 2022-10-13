@@ -146,7 +146,7 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
     nondominated_set: List[Union[MMOEASASolution, OmbukiSolution]] = list()
 
     global initialiser_execution_time, feasible_initialisations, crossover_successes, mutation_successes
-    initialiser_execution_time = process_time()
+    start = process_time()
     # the population is initialised with "population_size" amount of TWIH_solution copies
     TWIH_solution = TWIH(instance)
     if TWIH_solution.feasible:
@@ -157,9 +157,8 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
         population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
     del TWIH_solution
-    initialiser_execution_time = round((process_time() - initialiser_execution_time) * 1000, 3)
+    initialiser_execution_time = round((process_time() - start) * 1000, 3)
 
-    start = process_time()
     terminate = False
     iterations = 0
     # the multi-start termination is commented out because it's used to calculate the number of iterations termination during the termination check

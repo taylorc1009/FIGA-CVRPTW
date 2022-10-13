@@ -349,16 +349,15 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     nondominated_set: List[FIGASolution] = list()
 
     global initialiser_execution_time, feasible_initialisations, mutation_acceptances, crossover_acceptances
-    initialiser_execution_time = process_time()
+    start = process_time()
     for i in range(0, population_size):
         population.insert(i, DTWIH_III(instance, i))
         population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
             feasible_initialisations += 1
-    initialiser_execution_time = round((process_time() - initialiser_execution_time) * 1000, 3)
+    initialiser_execution_time = round((process_time() - start) * 1000, 3)
 
-    start = process_time()
     terminate = False
     iterations = 0
     last_nds_update = None
