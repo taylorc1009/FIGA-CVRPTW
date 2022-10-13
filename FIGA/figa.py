@@ -63,7 +63,7 @@ metropolis_returns: Dict[int, int]={1:0, 2:0, 3:0, 4:0}
 
     return solution"""
 
-def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
+"""def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
     sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
     range_of_sorted_nodes = int(ceil((len(instance.nodes) - 1) / 10))
     solution = FIGASolution(_id=_id)
@@ -97,7 +97,7 @@ def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
                     solution.vehicles[-1].calculate_destinations_time_windows(instance)
                     solution.vehicles[-1].current_capacity = node.demand
                 else:
-                    longest_wait_time, longest_waiting_point = 0.0, (0, 0)
+                    longest_wait_time, longest_waiting_point = 0.0, (instance.amount_of_vehicles, 0)
                     for v, vehicle in enumerate(solution.vehicles):
                         if vehicle.current_capacity + node.demand <= instance.capacity_of_vehicles:
                             for d, destination in enumerate(vehicle.get_customers_visited(), 1):
@@ -117,6 +117,54 @@ def DTWIH_II(instance: ProblemInstance, _id: int) -> FIGASolution:
                         v, d = longest_waiting_point
                         solution.vehicles[v].destinations.insert(d, new_destination)
                         solution.vehicles[v].calculate_destinations_time_windows(instance, start_from=d)
+        del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
+
+    solution.calculate_length_of_routes(instance)
+    solution.objective_function(instance)
+
+    return solution"""
+
+def find_feasible_point(instance: ProblemInstance, solution: FIGASolution, new_destination: Destination) -> bool:
+    longest_wait_time, longest_waiting_point = 0.0, (instance.amount_of_vehicles, 0)
+
+    for v, vehicle in enumerate(solution.vehicles):
+        if vehicle.current_capacity + new_destination.node.demand <= instance.capacity_of_vehicles:
+            for d, destination in enumerate(vehicle.destinations[1:], 1):
+                vehicle.destinations.insert(d, new_destination)
+
+                if vehicle.calculate_destinations_time_windows(instance, start_from=d):
+                    vehicle.current_capacity += new_destination.node.demand
+                    return
+                else:
+                    vehicle.destinations.pop(d)
+                    vehicle.calculate_destinations_time_windows(instance, start_from=d)
+
+                    if destination.wait_time > longest_wait_time:
+                        longest_wait_time, longest_waiting_point = destination.wait_time, (v, d)
+    return longest_waiting_point
+
+def DTWIH_III(instance: ProblemInstance, _id: int) -> FIGASolution:
+    sorted_nodes = sorted(list(instance.nodes.values())[1:], key=lambda n: n.ready_time) # sort every available node (except the depot, hence [1:] slice) by their ready_time
+    range_of_sorted_nodes = int(ceil((len(instance.nodes) - 1) / 10))
+    solution = FIGASolution(_id=_id)
+
+    while sorted_nodes:
+        shuffled_nodes_buffer = sorted_nodes[:min(range_of_sorted_nodes, len(sorted_nodes))] # get nodes from 0 to range_of_sorted_nodes; once these nodes have been inserted, they will be deleted do the next iteration gets the next "range_of_sorted_nodes" nodes
+        shuffle(shuffled_nodes_buffer)
+
+        for node in shuffled_nodes_buffer:
+            new_destination = Destination(node=node)
+            alternative_point = find_feasible_point(instance, solution, new_destination)
+
+            if alternative_point:
+                if len(solution.vehicles) < instance.amount_of_vehicles:
+                    solution.vehicles.append(Vehicle.create_route(instance, node))
+                    solution.vehicles[-1].calculate_destinations_time_windows(instance)
+                    solution.vehicles[-1].current_capacity = node.demand
+                else:
+                    v, d = alternative_point
+                    solution.vehicles[v].destinations.insert(d, new_destination)
+                    solution.vehicles[v].calculate_destinations_time_windows(instance, start_from=d)
         del sorted_nodes[:range_of_sorted_nodes] # remove the nodes that have been added from the sorted nodes to be added
 
     solution.calculate_length_of_routes(instance)
@@ -303,7 +351,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     global initialiser_execution_time, feasible_initialisations, mutation_acceptances, crossover_acceptances
     initialiser_execution_time = process_time()
     for i in range(0, population_size):
-        population.insert(i, DTWIH_II(instance, i))
+        population.insert(i, DTWIH_III(instance, i))
         population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
