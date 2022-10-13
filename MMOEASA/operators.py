@@ -247,24 +247,23 @@ def vehicle_insertion_possible(unvisited_nodes: Set[int], new_vehicle: Vehicle) 
     # then every node can be inserted and insertion is possible
     return len(unvisited_nodes.difference(nodes_to_insert)) == len(unvisited_nodes) - len(nodes_to_insert), nodes_to_insert
 
-def crossover1(instance: ProblemInstance, solution: Union[MMOEASASolution, OmbukiSolution], population: List[Union[MMOEASASolution, OmbukiSolution]], is_nondominated_set: bool) -> Union[MMOEASASolution, OmbukiSolution]:
-    solution.vehicles = [v for v in solution.vehicles if rand(1, 100) < 50] # remove some routes from a solution; each vehicle is given a 50% of being removed
-    random_solution = rand(0, len(population) - 1, exclude_values={solution.id} if not is_nondominated_set else {}) # if we're working with the non-dominated set then we don't need to prevent a solution from being randomly selected; the reason we would is so we don't crossover a solution from the population with itself
-    unvisited_nodes = set(range(1, len(instance.nodes))).difference([d.node.number for v in solution.vehicles for d in v.get_customers_visited()]) # create a set containing the node numbers of every node, then remove every node' number that the vehicle with routes removed still visits
+def crossover1(instance: ProblemInstance, parent_one: Union[MMOEASASolution, OmbukiSolution], parent_two: Union[MMOEASASolution, OmbukiSolution]) -> Union[MMOEASASolution, OmbukiSolution]:
+    parent_one.vehicles = [v for v in parent_one.vehicles if rand(1, 100) < 50] # remove some routes from a solution; each vehicle is given a 50% of being removed
+    unvisited_nodes = set(range(1, len(instance.nodes))).difference([d.node.number for v in parent_one.vehicles for d in v.get_customers_visited()]) # create a set containing the node numbers of every node, then remove every node' number that the vehicle with routes removed still visits
 
-    for i in range(len(population[random_solution].vehicles)):
-        if population[random_solution].vehicles[i].get_num_of_customers_visited() >= 1:
-            insertion_possible, new_nodes = vehicle_insertion_possible(unvisited_nodes, population[random_solution].vehicles[i]) # a vehicle from the randomly selected solution's list will be inserted if all of its destinations are listed in the unvisited nodes
+    for i in range(len(parent_two.vehicles)):
+        if parent_two.vehicles[i].get_num_of_customers_visited() >= 1:
+            insertion_possible, new_nodes = vehicle_insertion_possible(unvisited_nodes, parent_two.vehicles[i]) # a vehicle from the randomly selected solution's list will be inserted if all of its destinations are listed in the unvisited nodes
 
-            if insertion_possible and len(solution.vehicles) < instance.amount_of_vehicles:
-                solution.vehicles.append(copy.deepcopy(population[random_solution].vehicles[i]))
+            if insertion_possible and len(parent_one.vehicles) < instance.amount_of_vehicles:
+                parent_one.vehicles.append(copy.deepcopy(parent_two.vehicles[i]))
                 unvisited_nodes.difference_update(new_nodes)
 
                 if not unvisited_nodes:
                     break
 
     for node_number in unvisited_nodes: # will only perform any iterations if some destinations were not contained in any of the vehicles that were possible for crossover
-        solution = insert_unvisited_node(solution, instance, node_number)
-    solution.objective_function(instance)
+        parent_one = insert_unvisited_node(parent_one, instance, node_number)
+    parent_one.objective_function(instance)
 
-    return solution
+    return parent_one

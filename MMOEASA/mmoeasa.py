@@ -1,5 +1,5 @@
 import copy
-from random import getrandbits
+from random import choice, getrandbits
 from time import process_time
 from itertools import islice
 from MMOEASA.auxiliaries import is_nondominated, ombuki_is_nondominated, check_nondominated_set_acceptance
@@ -72,12 +72,12 @@ def calculate_cooling(i: int, temperature_max: float, temperature_min: float, te
 
     return cooling_rate
 
-def crossover(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], population: List[Union[MMOEASASolution, OmbukiSolution]], P_crossover: int, is_nondominated_set: bool) -> Union[MMOEASASolution, OmbukiSolution]:
+def crossover(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], population: List[Union[MMOEASASolution, OmbukiSolution]], P_crossover: int) -> Union[MMOEASASolution, OmbukiSolution]:
     if rand(1, 100) <= P_crossover:
         global crossover_invocations
         crossover_invocations += 1
 
-        return crossover1(instance, copy.deepcopy(I), population, is_nondominated_set)
+        return crossover1(instance, copy.deepcopy(I), population)
     return I
 
 def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], P_mutation: int, pending_copy: bool) -> Tuple[Union[MMOEASASolution, OmbukiSolution], bool]:
@@ -141,6 +141,14 @@ def mo_metropolis(instance: ProblemInstance, parent: Union[MMOEASASolution, Ombu
         else:
             return parent
 
+def selection_tournament(population: List[Union[MMOEASASolution, OmbukiSolution]], nondominated_set: List[Union[MMOEASASolution, OmbukiSolution]], nondominated_check: Callable[[Union[OmbukiSolution, MMOEASASolution], Union[OmbukiSolution, MMOEASASolution]], bool], exclude_solution: Union[MMOEASASolution, OmbukiSolution]=None) -> Union[MMOEASASolution, OmbukiSolution]:
+    population_members = list(filter(lambda s: s is not exclude_solution, population)) if exclude_solution else population
+    feasible_population_members = list(filter(lambda s: s.feasible, population_members))
+    solution_one = choice(feasible_population_members if feasible_population_members else population_members)
+    nondominated_members = list(filter(lambda s: s is not exclude_solution and s is not solution_one, nondominated_set)) if nondominated_set else None
+    solution_two = choice(nondominated_members) if nondominated_members else (choice(population_members))
+    return solution_one if nondominated_check(solution_two, solution_one) else solution_two
+
 def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
     population: List[Union[MMOEASASolution, OmbukiSolution]] = list()
     nondominated_set: List[Union[MMOEASASolution, OmbukiSolution]] = list()
@@ -161,26 +169,28 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
 
     terminate = False
     iterations = 0
+    nondominated_check = is_nondominated if instance.acceptance_criterion == "MMOEASA" else ombuki_is_nondominated
     # the multi-start termination is commented out because it's used to calculate the number of iterations termination during the termination check
     # this is so multi-start doesn't terminate the algorithm when time is the termination condition
     while not terminate:
         for solution in population: # multi-start is used to restart the Simulated Annealing attributes of every solution
             solution.temperature = solution.default_temperature
 
+        parent_two = selection_tournament(population, nondominated_set, nondominated_check)
+
         while population[0].temperature > temperature_stop and not terminate:
             for s, solution in enumerate(population):
-                selection_tournament = bool(getrandbits(1)) # determines whether to use the non-dominated set to get the second crossover parent
-                solution_copy = crossover(instance, solution, nondominated_set if selection_tournament else population, crossover_probability, not not selection_tournament)
+                solution_copy = crossover(instance, solution, parent_two if parent_two is not solution else selection_tournament(population, nondominated_set, nondominated_check, exclude_solution=solution), crossover_probability)
                 crossover_occurred = solution_copy is not solution # if the copy is equal to the original solution, this means that no copy happened and, therefore, crossover did not occur
                 mutations = 0
                 for _ in range(0, rand(1, MAX_SIMULTANEOUS_MUTATIONS)): # MMOEASA can perform up to three mutations in a single generation
-                    solution_copy, mutation_occurred = mutation(instance, mo_metropolis(instance, solution, solution_copy, solution.temperature, is_nondominated if instance.acceptance_criterion == "MMOEASA" else ombuki_is_nondominated), mutation_probability, solution_copy is solution)
+                    solution_copy, mutation_occurred = mutation(instance, mo_metropolis(instance, solution, solution_copy, solution.temperature, nondominated_check), mutation_probability, solution_copy is solution)
                     if mutation_occurred:
                         mutations += 1
 
-                population[s] = mo_metropolis(instance, solution, solution_copy, solution.temperature, is_nondominated if instance.acceptance_criterion == "MMOEASA" else ombuki_is_nondominated)
+                population[s] = mo_metropolis(instance, solution, solution_copy, solution.temperature, nondominated_check)
                 # if the metropolis function chose to overwrite the parent and the child is feasible and the child was added to the non-dominated set
-                if population[s] is solution_copy and population[s].feasible and check_nondominated_set_acceptance(nondominated_set, solution_copy, is_nondominated if instance.acceptance_criterion == "MMOEASA" else ombuki_is_nondominated):
+                if population[s] is solution_copy and population[s].feasible and check_nondominated_set_acceptance(nondominated_set, solution_copy, nondominated_check):
                     if crossover_occurred:
                         crossover_successes += 1
                     if mutations > 0:
