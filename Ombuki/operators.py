@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor
 import copy
 from random import choice, shuffle
 from typing import Dict, Union
@@ -42,7 +43,7 @@ def set_up_crossover_child(instance: ProblemInstance, parent_one: Union[OmbukiSo
 
     return crossover_solution
 
-def original_crossover_thread(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution], parent_vehicle: Vehicle, result: Dict[str, Union[OmbukiSolution, MMOEASASolution]]) -> None:
+def original_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution], parent_vehicle: Vehicle) -> None:
     # check commentary of "crossover" in "../FIGA/operators.py"
     # the difference in this operator is that when no feasible insertion point is found and the amount of vehicles in the solution is at the limit, a new one is created anyway (which is bad)
     crossover_solution = set_up_crossover_child(instance, solution, parent_vehicle)
@@ -82,9 +83,9 @@ def original_crossover_thread(instance: ProblemInstance, solution: Union[OmbukiS
         crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)
 
     crossover_solution.objective_function(instance)
-    result[currentThread().getName()] = crossover_solution # since threads cannot return values, the values are assigned to a mutable type instead (a dict in this case)
+    return crossover_solution
 
-def modified_crossover_thread(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution], parent_vehicle: Vehicle, result: Dict[str, Union[OmbukiSolution, MMOEASASolution]]) -> None:
+def modified_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution], parent_vehicle: Vehicle) -> None:
     # check commentary of "crossover" in "../FIGA/operators.py"
     # the difference in this operator is that when no feasible insertion point is found and the amount of vehicles in the solution is at the limit, the destination to be inserted is appended to the end of the route where the route's last destination is nearest to the deatination to be inserted
     crossover_solution = set_up_crossover_child(instance, solution, parent_vehicle)
@@ -131,27 +132,20 @@ def modified_crossover_thread(instance: ProblemInstance, solution: Union[OmbukiS
         crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)
 
     crossover_solution.objective_function(instance)
-    result[currentThread().getName()] = crossover_solution # since threads cannot return values, the values are assigned to a mutable type instead (a dict in this case)
+    return crossover_solution
 
 def crossover(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEASASolution], parent_two: Union[OmbukiSolution, MMOEASASolution], use_original: bool) -> Union[OmbukiSolution, MMOEASASolution]:
-    parent_one_vehicle = parent_one.vehicles[rand(0, len(parent_one.vehicles) - 1)]
-    parent_two_vehicle = parent_two.vehicles[rand(0, len(parent_two.vehicles) - 1)]
-
     # threads cannot return values, so they need to be given a mutable type that can be given the values we'd like to return; in this instance, a dict is used and the return values are assigned using the thread names
     # threading is used because Ombuki's crossover creates two child solutions
-    thread_results: Dict[str, Union[OmbukiSolution, MMOEASASolution]] = {"child_one": None, "child_two": None}
-    child_one_thread = Thread(name="child_one", target=original_crossover_thread if use_original else modified_crossover_thread, args=(instance, parent_one, parent_two_vehicle, thread_results))
-    child_two_thread = Thread(name="child_two", target=original_crossover_thread if use_original else modified_crossover_thread, args=(instance, parent_two, parent_one_vehicle, thread_results))
-    child_one_thread.start()
-    child_two_thread.start()
-    child_one_thread.join()
-    child_two_thread.join()
+    """parent_one_vehicle, parent_two_vehicle = choice(parent_one.vehicles), choice(parent_two.vehicles)
+    with ProcessPoolExecutor() as executor:
+        crossover_one = executor.submit(original_crossover_thread if use_original else modified_crossover_thread, instance, parent_one, parent_two_vehicle)
+        crossover_two = executor.submit(original_crossover_thread if use_original else modified_crossover_thread, instance, parent_two, parent_one_vehicle)
+        child_one = crossover_one.result()
+        child_two = crossover_two.result()"""
 
-    # from the two child solutions, return the dominating one
-    thread_results["child_two"].id = thread_results["child_one"].id
-    if instance.acceptance_criterion == "MMOEASA":
-        return thread_results["child_one"] if mmoeasa_is_nondominated(thread_results["child_one"], thread_results["child_two"]) else thread_results["child_two"]
-    return thread_results["child_one"] if is_nondominated(thread_results["child_one"], thread_results["child_two"]) else thread_results["child_two"]
+    operator = original_crossover if use_original else modified_crossover
+    return operator(instance, parent_one, choice(parent_two.vehicles)), operator(instance, parent_two, choice(parent_one.vehicles))
 
 """def get_next_vehicles_destinations(solution: Union[OmbukiSolution, MMOEASASolution], vehicle: int, first_destination: int, remaining_destinations: int) -> List[Destination]:
     if not remaining_destinations: # if the amount of destinations left to acquire is equal to zero, then return an empty list

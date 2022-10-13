@@ -76,8 +76,14 @@ if __name__ == '__main__':
                 exc = ValueError("FIGA should not be given a pre-determined acceptance criterion; it only has one")
                 raise exc
 
-        if len(sys.argv) != 4 or sys.argv[3].upper() not in {"MMOEASA", "OMBUKI"}:
-            exc = ValueError(f"Acceptance criterion \"{'' if len(sys.argv) != 4 else sys.argv[3]}\" was not recognised")
+        if len(sys.argv) != 4:
+            exc = ValueError("No acceptance criterion was given")
+            raise exc
+        elif sys.argv[3].upper() not in {"MMOEASA", "OMBUKI"}:
+            exc = ValueError(f"Acceptance criterion \"{sys.argv[3]}\" was not recognised")
+            raise exc
+        elif sys.argv[1].upper() == "OMBUKI" and sys.argv[3].upper() == "MMOEASA":
+            exc = ValueError("Ombuki's Algorithm no longer supports MMOEASA's acceptance criterion; that is until a work-around is found for the weighted sum")
             raise exc
         problem_instance = open_problem_instance(sys.argv[1].upper(), sys.argv[2], sys.argv[3].upper())
 

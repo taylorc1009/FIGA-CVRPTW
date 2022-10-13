@@ -10,9 +10,10 @@ class OmbukiSolution(Solution):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0, total_distance: float=0.0, num_vehicles: int=0, rank: int=INT_MAX) -> None:
         super(OmbukiSolution, self).__init__(_id=_id, vehicles=vehicles, feasible=feasible, default_temperature=default_temperature, temperature=temperature, cooling_rate=cooling_rate, total_distance=total_distance, rank=rank) # initialise every solution's temperature (in Ombuki) to 100 and don't modify it later so that Simulated Annealing isn't used when MMOEASA's acceptance criterion, "MO_Metropolis", is being utilised
         self.num_vehicles: int=int(num_vehicles) # the reason this objective is a variable instead of just using "len(vehicles)" is because if the solution is invalid, it needs to be set to a very high number
+        self.fitness: float=float(INT_MAX)
 
     def __str__(self) -> str:
-        return f"total_distance={self.total_distance}, num_vehicles={self.num_vehicles}, {len(self.vehicles)=}, {[f'{i}. {str(v)}' for i, v in enumerate(self.vehicles)]}"
+        return f"total_distance={self.total_distance}, num_vehicles={self.num_vehicles}, {self.fitness}, {len(self.vehicles)=}, {[f'{i}. {str(v)}' for i, v in enumerate(self.vehicles)]}"
 
     def __nullify(self) -> None:
         self.feasible = False
@@ -44,3 +45,6 @@ class OmbukiSolution(Solution):
 
     def is_valid(self, filename: str) -> "OmbukiSolution":
         ...
+
+    def calculate_fitness(self) -> None:
+        self.fitness = 100 * len(self.vehicles) + 0.001 * sum(v.route_distance for v in self.vehicles)

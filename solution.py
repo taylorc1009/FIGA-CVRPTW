@@ -50,5 +50,5 @@ class Solution(ABC):
         ...
 
     @abstractclassmethod
-    def is_valid(self, filename: str) -> "Solution":
+    def is_valid(cls, filename: str) -> "Solution":
         ...

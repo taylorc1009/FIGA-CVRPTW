@@ -1,5 +1,4 @@
 import copy
-from threading import Thread
 from time import process_time
 from typing import Deque, List, Union, Dict, Tuple
 from Ombuki.operators import crossover, mutation
@@ -8,13 +7,12 @@ from problemInstance import ProblemInstance
 from Ombuki.ombukiSolution import OmbukiSolution
 from vehicle import Vehicle
 from destination import Destination
-from Ombuki.auxiliaries import is_nondominated, mmoeasa_is_nondominated, get_nondominated_set
+from Ombuki.auxiliaries import is_nondominated, mmoeasa_is_nondominated, get_lowest_weighted_solution
 from numpy import round, random
 from random import choice, sample
 from Ombuki.constants import TOURNAMENT_SET_SIZE, TOURNAMENT_PROBABILITY_SELECT_BEST, GREEDY_PERCENT
 from constants import INT_MAX
 from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
-from MMOEASA.mmoeasa import mo_metropolis
 
 initialiser_execution_time: int=0
 feasible_initialisations: int=0
@@ -93,19 +91,11 @@ def pareto_rank(instance: ProblemInstance, population: List[Union[OmbukiSolution
     num_rank_ones = 0
 
     while unranked_solutions:
-        nondominated_set = get_nondominated_set(unranked_solutions, mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)
-        for s in list(nondominated_set): # assign the current rank to every non-dominated solution in the population; curr_rank will equal 1 during the first iteration, then 2 in the next, and so on
-            population[s].rank = curr_rank
-            if curr_rank == 1:
-                num_rank_ones += 1
-        if not nondominated_set: # if there are no non-dominated solutions, then assign every remaining unranked solution the same rank (curr_rank)
-            for solution in unranked_solutions:
-                solution.rank = curr_rank
-            if curr_rank == 1:
-                num_rank_ones += len(unranked_solutions)
-            break
-        else:
-            unranked_solutions = list(filter(lambda s: s.id not in nondominated_set, unranked_solutions)) # once solutions have been assigned a rank, remove them from the solutions to be ranked and start the Pareto-rank again with curr_rank + 1
+        nondominated_solution = population[get_lowest_weighted_solution(unranked_solutions, mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)]
+        nondominated_solution.rank = curr_rank
+        if curr_rank == 1:
+            num_rank_ones += 1
+        unranked_solutions = unranked_solutions.remove(nondominated_solution) # once solutions have been assigned a rank, remove them from the solutions to be ranked and start the Pareto-rank again with curr_rank + 1
         curr_rank += 1
 
     return num_rank_ones
@@ -153,6 +143,7 @@ def modified_feasible_network_transformation(instance: ProblemInstance, solution
 
             while not feasible_insertion:
                 if transformed_solution.vehicles[v].current_capacity + destination.node.demand <= instance.capacity_of_vehicles and transformed_solution.vehicles[v].destinations[-2].departure_time + instance.get_distance(transformed_solution.vehicles[v].destinations[-2].node.number, destination.node.number) <= destination.node.due_date:
+                    transformed_solution.vehicles[v].current_capacity += destination.node.demand
                     transformed_solution.vehicles[v].destinations.insert(len(transformed_solution.vehicles[v].destinations) - 1, copy.deepcopy(destination))
                     transformed_solution.vehicles[v].calculate_destination_time_window(instance, -3, -2)
                     transformed_solution.vehicles[v].calculate_destination_time_window(instance, -2, -1)
@@ -174,31 +165,23 @@ def modified_feasible_network_transformation(instance: ProblemInstance, solution
                         feasible_insertion = True
                     v += 1
 
-            transformed_solution.vehicles[v].current_capacity += destination.node.demand
-            transformed_solution.vehicles[v].calculate_destination_time_window(instance, -3, -2)
-            transformed_solution.vehicles[v].calculate_destination_time_window(instance, -2, -1)
             if not feasible_insertion:
                 v = first_attempted_vehicle
+                transformed_solution.vehicles[v].current_capacity += destination.node.demand
+                transformed_solution.vehicles[v].calculate_destination_time_window(instance, -3, -2)
+                transformed_solution.vehicles[v].calculate_destination_time_window(instance, -2, -1)
 
-    transformed_solution.calculate_vehicles_loads()
     transformed_solution.calculate_length_of_routes(instance)
-    transformed_solution.calculate_routes_time_windows(instance)
     transformed_solution.objective_function(instance)
 
     return transformed_solution
-
-def check_route_time_windows(vehicle: Vehicle) -> bool:
-    for d in range(1, vehicle.get_num_of_customers_visited()):
-        if vehicle.destinations[d].arrival_time > vehicle.destinations[d].node.due_date:
-            return False
-    return True
 
 def relocate_final_destinations(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution]) -> Union[OmbukiSolution, MMOEASASolution]:
     relocated_solution = copy.deepcopy(solution)
 
     i = 0
     while i < len(relocated_solution.vehicles):
-        feasible = check_route_time_windows(relocated_solution.vehicles[i])
+        feasible = relocated_solution.vehicles[i].calculate_destinations_time_windows(instance)
         j = i + 1 if i < len(relocated_solution.vehicles) - 1 else 0
         
         relocated_solution.vehicles[j].destinations.insert(1, relocated_solution.vehicles[i].destinations.pop(relocated_solution.vehicles[i].get_num_of_customers_visited())) # move a route's final destination to the following route's first destination
@@ -208,7 +191,7 @@ def relocate_final_destinations(instance: ProblemInstance, solution: Union[Ombuk
 
         if not relocated_solution.vehicles[j].current_capacity > instance.capacity_of_vehicles:
             relocated_solution.vehicles[j].calculate_destinations_time_windows(instance)
-            swap_is_feasible = check_route_time_windows(relocated_solution.vehicles[j])
+            swap_is_feasible = relocated_solution.vehicles[j].calculate_destinations_time_windows(instance)
             if feasible and not swap_is_feasible: # if, after relocation, the route's time windows are violated and the route before relocation was feasible, set "feasible" to false so that this chamge is reverted ...
                 feasible = False
             else: # ... otherwise set it to whether the time windows were violated or not
@@ -244,7 +227,7 @@ def routing_scheme(instance: ProblemInstance, solution: Union[OmbukiSolution, MM
     relocated_solution = relocate_final_destinations(instance, transformed_solution)
 
     # return the relocated solution if it dominates the transformed solution is dominated by it, otherwise return the transformed solution
-    if isinstance(solution, MMOEASASolution):
+    if instance.acceptance_criterion == "MMOEASA":
         return relocated_solution if not transformed_solution.feasible or (relocated_solution.total_distance < transformed_solution.total_distance and relocated_solution.cargo_unbalance < transformed_solution.cargo_unbalance) else transformed_solution
     return relocated_solution if not transformed_solution.feasible or (relocated_solution.total_distance < transformed_solution.total_distance and relocated_solution.num_vehicles < transformed_solution.num_vehicles) else transformed_solution
 
@@ -261,20 +244,13 @@ def selection_tournament(instance: ProblemInstance, population: List[Union[Ombuk
         return best_solution
     return choice(tournament_set) # ... otherwise, return a random solution of the tournament set
 
-def crossover_probability(instance: ProblemInstance, iterator_parent: Union[OmbukiSolution, MMOEASASolution], tournament_parent: Union[OmbukiSolution, MMOEASASolution], probability: int, use_original: bool) -> Union[OmbukiSolution, MMOEASASolution]:
+def crossover_probability(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEASASolution], parent_two: Union[OmbukiSolution, MMOEASASolution], probability: int, use_original: bool) -> Tuple[Union[OmbukiSolution, MMOEASASolution], Union[OmbukiSolution, MMOEASASolution]]:
     if rand(1, 100) < probability:
         global crossover_invocations, crossover_successes
         crossover_invocations += 1
 
-        crossover_solution = crossover(instance, iterator_parent, tournament_parent, use_original)
-
-        if instance.acceptance_criterion == "MMOEASA":
-            if mmoeasa_is_nondominated(iterator_parent, crossover_solution):
-                crossover_successes += 1
-        elif is_nondominated(iterator_parent, crossover_solution):
-            crossover_successes += 1
-        return crossover_solution
-    return iterator_parent
+        return crossover(instance, parent_one, parent_two, use_original)
+    return parent_one, parent_two
 
 def mutation_probability(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution], probability: int, pending_copy: bool) -> Union[OmbukiSolution, MMOEASASolution]:
     if rand(1, 100) < probability:
@@ -303,35 +279,45 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
         if greedy_solution.feasible:
             feasible_initialisations += 1
         population.insert(i, greedy_solution)
+        greedy_solution.calculate_fitness()
     for i in range(num_greedy_solutions, population_size): # ... the other 90% will be random generations
         random_solution = generate_random_solution(instance, i)
         if random_solution.feasible:
             feasible_initialisations += 1
         population.insert(i, random_solution)
+        random_solution.calculate_fitness()
+    pareto_rank(instance, population)
     initialiser_execution_time = round((process_time() - start) * 1000, 3)
 
     terminate = False
     iterations = 0
+    nondominated_check = mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated
     while not terminate:
-        winning_parent = selection_tournament(instance, population)
-
         for i, solution in enumerate(population):
             if not solution.feasible: # the routing scheme is likely destructive of good solutions and will have no effect on feasible solutions, so only execute it on infeasible solutions
                 population[i] = routing_scheme(instance, solution, use_original_operators)
 
-            result = crossover_probability(instance, solution, winning_parent, crossover, use_original_operators)
-            result = mutation_probability(instance, result, mutation, result is solution)
+        new_generation = []
+        for _ in range(int(round(population_size / 2))):
+            parent_one = selection_tournament(instance, population)
+            parent_two = selection_tournament(instance, population, exclude_solution=parent_one)
 
-            if not solution.feasible: # always overwrite the parent if it is infeasible as there's no other way to determine if the child should be accepted, and we don't want to keep infeasible solutions
-                population[i] = result
-            elif result.feasible: # if the child is feasible then try and accept it into the population
-                if instance.acceptance_criterion == "MMOEASA":
-                    population[i] = mo_metropolis(instance, solution, result, 100.0)
-                elif is_nondominated(solution, result):
-                    population[i] = result
-        num_rank_ones = pareto_rank(instance, population)
+            child_one, child_two = crossover_probability(instance, parent_one, parent_two, crossover, use_original_operators)
+            new_generation.append(mutation_probability(instance, child_one, mutation, child_one is parent_one))
+            new_generation.append(mutation_probability(instance, child_two, mutation, child_two is parent_two))
+
+            new_generation[-2].calculate_fitness()
+            new_generation[-1].calculate_fitness()
+        num_rank_ones = pareto_rank(instance, new_generation)
+
+        population_fittest = get_lowest_weighted_solution(population, nondominated_check)
+        new_generation_fittest = get_lowest_weighted_solution(new_generation, nondominated_check)
+        if not nondominated_check(population[population_fittest], new_generation[new_generation_fittest]):
+            new_generation[new_generation_fittest] = population[population_fittest]
+
+        population = new_generation
+
         iterations += 1
-
         if termination_type == "iterations":
             terminate = check_iterations_termination_condition(iterations, termination_condition, num_rank_ones, population, progress_indication_steps)
         elif termination_type == "seconds":
@@ -348,4 +334,4 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
     }
 
     # because MMOEASA only returns a non-dominated set with a size equal to the population size, and Ombuki doesn't have a non-dominated set with a restricted size, the algorithm needs to select (unbiasedly) a fixed amount of rank 1 solutions for a fair evaluation
-    return list(filter(lambda s: s.rank == 1 and s.total_distance < 10000, population))[:20], statistics
+    return list(filter(lambda s: s.rank == 1 and s.feasible, population))[:20], statistics
