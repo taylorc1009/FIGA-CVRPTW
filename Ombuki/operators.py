@@ -1,13 +1,10 @@
 from concurrent.futures import ProcessPoolExecutor
 import copy
 from random import choice, shuffle
-from typing import Dict, Union
+from typing import Tuple, Union
 from Ombuki.constants import MUTATION_REVERSAL_LENGTH
-from Ombuki.auxiliaries import is_nondominated, mmoeasa_is_nondominated
 from Ombuki.ombukiSolution import OmbukiSolution
 from MMOEASA.mmoeasaSolution import MMOEASASolution
-from threading import Thread, currentThread
-from destination import Destination
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
 from common import rand
@@ -134,7 +131,7 @@ def modified_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution
     crossover_solution.objective_function(instance)
     return crossover_solution
 
-def crossover(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEASASolution], parent_two: Union[OmbukiSolution, MMOEASASolution], use_original: bool) -> Union[OmbukiSolution, MMOEASASolution]:
+def crossover(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEASASolution], parent_two: Union[OmbukiSolution, MMOEASASolution], use_original: bool) -> Tuple[Union[OmbukiSolution, MMOEASASolution], Union[OmbukiSolution, MMOEASASolution]]:
     # threads cannot return values, so they need to be given a mutable type that can be given the values we'd like to return; in this instance, a dict is used and the return values are assigned using the thread names
     # threading is used because Ombuki's crossover creates two child solutions
     """parent_one_vehicle, parent_two_vehicle = choice(parent_one.vehicles), choice(parent_two.vehicles)
