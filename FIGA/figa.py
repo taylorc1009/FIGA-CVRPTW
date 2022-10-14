@@ -183,13 +183,15 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
     solutions_to_remove = set()
 
     for s, solution in enumerate(nondominated_set[:-1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
-        for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
-            # we need to check if both solutions dominate one another; s may not dominate s_aux, but s_aux may dominate s, and if neither dominate each other, then they still remain in the non-dominated set
-            if is_nondominated(solution, solution_auxiliary):
-                solutions_to_remove.add(s)
-            elif is_nondominated(solution_auxiliary, solution) \
-                    or check_are_identical(solution, solution_auxiliary): # this "or" clause removes identical solutions, but it is not needed as "mo_metropolis" prevents duplicate solutions prior to this
-                solutions_to_remove.add(s_aux)
+        if s not in solutions_to_remove:
+            for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
+                if s_aux not in solutions_to_remove:
+                    # we need to check if both solutions dominate one another; s may not dominate s_aux, but s_aux may dominate s, and if neither dominate each other, then they still remain in the non-dominated set
+                    if is_nondominated(solution, solution_auxiliary):
+                        solutions_to_remove.add(s)
+                    elif is_nondominated(solution_auxiliary, solution) \
+                            or check_are_identical(solution, solution_auxiliary): # this "or" clause removes identical solutions, but it is not needed as "mo_metropolis" prevents duplicate solutions prior to this
+                        solutions_to_remove.add(s_aux)
 
     if solutions_to_remove:
         i = 0
