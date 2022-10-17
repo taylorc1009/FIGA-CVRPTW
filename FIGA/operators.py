@@ -1,7 +1,7 @@
 import copy
 from random import shuffle, choice, getrandbits
 from typing import List, Set
-from FIGA.parameters import MUTATION_FEASIBLE_SWAP_PROBABILITY, MUTATION_MAX_SLICE_LENGTH, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY, MUTATION_THREATENED_WINDOW_PROBABILITY
+from FIGA.parameters import MUTATION_FEASIBLE_SWAP_PROBABILITY, MUTATION_MAX_SLICE_LENGTH, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
@@ -309,12 +309,12 @@ def LDHR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolu
 
     return solution
 
-def move_destination_to_fit_window(instance: ProblemInstance, solution: FIGASolution, reverse: bool=False) -> FIGASolution:
+def TWBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Reorder Mutator
     random_vehicle = select_random_vehicle(solution, customers_required=2)
 
     original_indexes = {destination.node.number: index for index, destination in enumerate(solution.vehicles[random_vehicle].get_customers_visited(), 1)} # will be used to get the current index of a destination to be moved forward or pushed back
     sorted_destinations = list(enumerate(sorted(solution.vehicles[random_vehicle].get_customers_visited(), key=lambda d: d.node.ready_time), 1)) # sort the destinations in a route by their ready_time
-    if reverse: # if the list is reversed then we want to push the destination with the highest ready_time to the back of the route
+    if bool(getrandbits(1)): # if the list is reversed then we want to push the destination with the highest ready_time to the back of the route
         sorted_destinations = reversed(sorted_destinations)
 
     for d, destination in sorted_destinations:
@@ -327,9 +327,6 @@ def move_destination_to_fit_window(instance: ProblemInstance, solution: FIGASolu
     solution.objective_function(instance)
 
     return solution
-
-def TWBR_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Reorder Mutator
-    return move_destination_to_fit_window(instance, solution, reverse=bool(getrandbits(1)))
 
 def TWBLC_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Local Crossover Mutator
     origin_vehicle_index = select_random_vehicle(solution)

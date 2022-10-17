@@ -146,7 +146,7 @@ def selection_tournament(population: List[Union[MMOEASASolution, OmbukiSolution]
     feasible_population_members = list(filter(lambda s: s.feasible, population_members))
     solution_one = choice(feasible_population_members if feasible_population_members else population_members)
     nondominated_members = list(filter(lambda s: s is not exclude_solution and s is not solution_one, nondominated_set)) if nondominated_set else None
-    solution_two = choice(nondominated_members) if nondominated_members else (choice(population_members))
+    solution_two = choice(nondominated_members) if nondominated_members else choice(population_members)
     return solution_one if nondominated_check(solution_two, solution_one) else solution_two
 
 def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
