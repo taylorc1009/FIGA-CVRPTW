@@ -338,4 +338,4 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
     }
 
     # because MMOEASA only returns a non-dominated set with a size equal to the population size, and Ombuki doesn't have a non-dominated set with a restricted size, the algorithm needs to select (unbiasedly) a fixed amount of rank 1 solutions for a fair evaluation
-    return list(filter(lambda s: s.rank == 1 and s.feasible, get_unique_set(population)))[:20], statistics
+    return list(filter(lambda s: s.rank == 1 and s.feasible, get_unique_set(population))), statistics

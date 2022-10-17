@@ -189,6 +189,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                     # we need to check if both solutions dominate one another; s may not dominate s_aux, but s_aux may dominate s, and if neither dominate each other, then they still remain in the non-dominated set
                     if is_nondominated(solution, solution_auxiliary):
                         solutions_to_remove.add(s)
+                        break
                     elif is_nondominated(solution_auxiliary, solution) \
                             or check_are_identical(solution, solution_auxiliary): # this "or" clause removes identical solutions, but it is not needed as "mo_metropolis" prevents duplicate solutions prior to this
                         solutions_to_remove.add(s_aux)
@@ -200,7 +201,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                 nondominated_set[i] = nondominated_set[s] # shift every solution whose list index is not in solutions_to_remove
                 i += 1
         if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
-            del nondominated_set[i if i < 20 else 20:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
+            del nondominated_set[i:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
             return process_time() if subject_solution in nondominated_set else None
 
 def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:

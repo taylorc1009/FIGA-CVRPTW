@@ -1,4 +1,5 @@
 from typing import List, Union, Callable
+from common import check_are_identical
 from constants import INT_MAX
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 from Ombuki.ombukiSolution import OmbukiSolution
@@ -21,13 +22,15 @@ def check_nondominated_set_acceptance(nondominated_set: List[Union[MMOEASASoluti
 
     # check commentary of "check_nondominated_set_acceptance" in "../FIGA/figa.py"
     for s, solution in enumerate(nondominated_set[:-1]):
-        for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1):
-            if nondominated_check(solution, solution_auxiliary):
-                solutions_to_remove.add(s)
-            elif nondominated_check(solution_auxiliary, solution) \
-                    or (isinstance(solution_auxiliary, MMOEASASolution) and solution.total_distance == solution_auxiliary.total_distance and solution.cargo_unbalance == solution_auxiliary.cargo_unbalance) \
-                    or (isinstance(solution_auxiliary, OmbukiSolution) and solution.total_distance == solution_auxiliary.total_distance and solution.num_vehicles == solution_auxiliary.num_vehicles):
-                solutions_to_remove.add(s_aux)
+        if s not in solutions_to_remove:
+            for s_aux, solution_auxiliary in enumerate(nondominated_set[s + 1:], s + 1):
+                if s_aux not in solutions_to_remove:
+                    if nondominated_check(solution, solution_auxiliary):
+                        solutions_to_remove.add(s)
+                        break
+                    elif nondominated_check(solution_auxiliary, solution) \
+                            or check_are_identical(solution, solution_auxiliary):
+                        solutions_to_remove.add(s_aux)
 
     if solutions_to_remove:
         i = 0
@@ -36,8 +39,6 @@ def check_nondominated_set_acceptance(nondominated_set: List[Union[MMOEASASoluti
                 nondominated_set[i] = nondominated_set[s]
                 i += 1
         if i != len(nondominated_set):
-            if i > 20:
-                i = 20
             del nondominated_set[i:]
 
     return subject_solution in nondominated_set
