@@ -44,6 +44,3 @@ class OmbukiSolution(Solution):
 
     def is_valid(self, filename: str) -> "OmbukiSolution":
         ...
-
-    def calculate_fitness(self) -> None:
-        self.fitness = 100 * len(self.vehicles) + 0.001 * sum(v.route_distance for v in self.vehicles)

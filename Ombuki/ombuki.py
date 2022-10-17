@@ -241,31 +241,36 @@ def routing_scheme(instance: ProblemInstance, solution: Union[OmbukiSolution, MM
 
 def selection_tournament(instance: ProblemInstance, population: List[Union[OmbukiSolution, MMOEASASolution]], exclude_solution: Union[OmbukiSolution, MMOEASASolution]=None) -> Union[OmbukiSolution, MMOEASASolution]:
     tournament_set = sample(list(filter(lambda s: s is not exclude_solution, population)) if exclude_solution else population, TOURNAMENT_SET_SIZE) # in the else instance, there are no feasible (and therefore, rank 1) solutions, so work with the entire population instead
+
     if rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST: # probability of selecting the best solution in the tournament set to be returned ...
         best_solution = tournament_set[0]
+
         for solution in tournament_set[1:]: # find the non-dominated solution of the 4 chosen solutions, for it to be returned
             if instance.acceptance_criterion == "MMOEASA":
                 if mmoeasa_is_nondominated(best_solution, solution):
                     best_solution = solution
             elif is_nondominated(best_solution, solution):
                 best_solution = solution
+
         return best_solution
     return choice(tournament_set) # ... otherwise, return a random solution of the tournament set
 
 def crossover_probability(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEASASolution], parent_two: Union[OmbukiSolution, MMOEASASolution], probability: int, use_original: bool) -> Tuple[Union[OmbukiSolution, MMOEASASolution], Union[OmbukiSolution, MMOEASASolution]]:
+    parent_one_copy, parent_two_copy = copy.deepcopy(parent_one), copy.deepcopy(parent_two) # we always need to make a deep copy because we don't want multiple instances of the same solution in the new generation
+
     if rand(1, 100) < probability:
         global crossover_invocations, crossover_successes
         crossover_invocations += 1
 
-        return crossover(instance, parent_one, parent_two, use_original)
-    return parent_one, parent_two
+        return crossover(instance, parent_one_copy, parent_two_copy, use_original)
+    return parent_one_copy, parent_two_copy
 
 def mutation_probability(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution], probability: int, pending_copy: bool) -> Union[OmbukiSolution, MMOEASASolution]:
     if rand(1, 100) < probability:
         global mutation_invocations, mutation_successes
         mutation_invocations += 1
 
-        mutated_solution = mutation(instance, copy.deepcopy(solution) if pending_copy else solution)
+        mutated_solution = mutation(instance, copy.deepcopy(solution))
 
         if instance.acceptance_criterion == "MMOEASA":
             if mmoeasa_is_nondominated(solution, mutated_solution):
@@ -274,7 +279,7 @@ def mutation_probability(instance: ProblemInstance, solution: Union[OmbukiSoluti
         elif is_nondominated(solution, mutated_solution):
             mutation_successes += 1
             return mutated_solution
-    return solution
+    return copy.deepcopy(solution) if pending_copy else solution # we always need to make a deep copy because we don't want multiple instances of the same solution in the new generation
 
 def Ombuki(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover: int, mutation: int, use_original_operators: bool, progress_indication_steps: Deque[float]) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
     population: List[Union[OmbukiSolution, MMOEASASolution]] = list()
@@ -287,13 +292,11 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
         if greedy_solution.feasible:
             feasible_initialisations += 1
         population.insert(i, greedy_solution)
-        greedy_solution.calculate_fitness()
     for i in range(num_greedy_solutions, population_size): # ... the other 90% will be random generations
         random_solution = generate_random_solution(instance, i)
         if random_solution.feasible:
             feasible_initialisations += 1
         population.insert(i, random_solution)
-        random_solution.calculate_fitness()
     pareto_rank(instance, population)
     initialiser_execution_time = round((process_time() - start) * 1000, 3)
 
@@ -312,14 +315,10 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
             child_one, child_two = crossover_probability(instance, parent_one, parent_two, crossover, use_original_operators)
             new_generation.append(mutation_probability(instance, child_one, mutation, child_one is parent_one))
             new_generation.append(mutation_probability(instance, child_two, mutation, child_two is parent_two))
-
-            new_generation[-2].calculate_fitness()
-            new_generation[-1].calculate_fitness()
         num_rank_ones = pareto_rank(instance, new_generation)
 
-        nondominated_rank_ones = get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)
+        nondominated_rank_ones = list(filter(lambda s: s not in new_generation, get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)))
         new_generation[:len(nondominated_rank_ones)] = nondominated_rank_ones
-
         population = new_generation
 
         iterations += 1

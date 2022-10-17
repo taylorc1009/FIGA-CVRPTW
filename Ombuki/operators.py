@@ -10,9 +10,7 @@ from vehicle import Vehicle
 from common import rand
 from constants import INT_MAX
 
-def set_up_crossover_child(instance: ProblemInstance, parent_one: Union[OmbukiSolution, MMOEASASolution], parent_two_vehicle: Vehicle) -> OmbukiSolution:
-    crossover_solution = copy.deepcopy(parent_one)
-
+def set_up_crossover_child(instance: ProblemInstance, crossover_solution: Union[OmbukiSolution, MMOEASASolution], parent_two_vehicle: Vehicle) -> OmbukiSolution:
     # check commentary of "set_up_crossover_child" in "../FIGA/operators.py"
     nodes_to_remove = set([d.node.number for d in parent_two_vehicle.get_customers_visited()])
     i = 0
