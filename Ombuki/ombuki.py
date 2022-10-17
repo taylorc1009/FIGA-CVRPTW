@@ -7,12 +7,12 @@ from problemInstance import ProblemInstance
 from Ombuki.ombukiSolution import OmbukiSolution
 from vehicle import Vehicle
 from destination import Destination
-from Ombuki.auxiliaries import is_nondominated, mmoeasa_is_nondominated, get_lowest_weighted_solution
-from numpy import round, random
+from Ombuki.auxiliaries import get_nondominated_set, get_unique_set, is_nondominated, mmoeasa_is_nondominated
+from numpy import round
 from random import choice, sample
 from Ombuki.constants import TOURNAMENT_SET_SIZE, TOURNAMENT_PROBABILITY_SELECT_BEST, GREEDY_PERCENT
 from constants import INT_MAX
-from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
+from common import check_are_identical, rand, check_iterations_termination_condition, check_seconds_termination_condition
 
 initialiser_execution_time: int=0
 feasible_initialisations: int=0
@@ -91,11 +91,19 @@ def pareto_rank(instance: ProblemInstance, population: List[Union[OmbukiSolution
     num_rank_ones = 0
 
     while unranked_solutions:
-        nondominated_solution = population[get_lowest_weighted_solution(unranked_solutions, mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)]
-        nondominated_solution.rank = curr_rank
-        if curr_rank == 1:
-            num_rank_ones += 1
-        unranked_solutions = unranked_solutions.remove(nondominated_solution) # once solutions have been assigned a rank, remove them from the solutions to be ranked and start the Pareto-rank again with curr_rank + 1
+        nondominated_set = get_nondominated_set(unranked_solutions, mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)
+        if nondominated_set: # if there are no non-dominated solutions, then assign every remaining unranked solution the same rank (curr_rank)
+            for solution in nondominated_set: # assign the current rank to every non-dominated solution in the population; curr_rank will equal 1 during the first iteration, then 2 in the next, and so on
+                solution.rank = curr_rank
+                if curr_rank == 1:
+                    num_rank_ones += 1
+            unranked_solutions = list(filter(lambda s: s not in nondominated_set, unranked_solutions)) # once solutions have been assigned a rank, remove them from the solutions to be ranked and start the Pareto-rank again with curr_rank + 1
+        else:
+            for solution in unranked_solutions:
+                solution.rank = curr_rank
+            if curr_rank == 1:
+                num_rank_ones += len(unranked_solutions)
+            break
         curr_rank += 1
 
     return num_rank_ones
@@ -291,7 +299,6 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
 
     terminate = False
     iterations = 0
-    nondominated_check = mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated
     while not terminate:
         for i, solution in enumerate(population):
             if not solution.feasible: # the routing scheme is likely destructive of good solutions and will have no effect on feasible solutions, so only execute it on infeasible solutions
@@ -310,10 +317,8 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
             new_generation[-1].calculate_fitness()
         num_rank_ones = pareto_rank(instance, new_generation)
 
-        population_fittest = get_lowest_weighted_solution(population, nondominated_check)
-        new_generation_fittest = get_lowest_weighted_solution(new_generation, nondominated_check)
-        if not nondominated_check(population[population_fittest], new_generation[new_generation_fittest]):
-            new_generation[new_generation_fittest] = population[population_fittest]
+        nondominated_rank_ones = get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)
+        new_generation[:len(nondominated_rank_ones)] = nondominated_rank_ones
 
         population = new_generation
 
@@ -334,4 +339,4 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
     }
 
     # because MMOEASA only returns a non-dominated set with a size equal to the population size, and Ombuki doesn't have a non-dominated set with a restricted size, the algorithm needs to select (unbiasedly) a fixed amount of rank 1 solutions for a fair evaluation
-    return list(filter(lambda s: s.rank == 1 and s.feasible, population))[:20], statistics
+    return list(filter(lambda s: s.rank == 1 and s.feasible, get_unique_set(population)))[:20], statistics
