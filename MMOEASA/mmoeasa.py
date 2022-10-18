@@ -176,9 +176,9 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
         for solution in population: # multi-start is used to restart the Simulated Annealing attributes of every solution
             solution.temperature = solution.default_temperature
 
-        parent_two = selection_tournament(population, nondominated_set, nondominated_check)
-
         while population[0].temperature > temperature_stop and not terminate:
+            parent_two = selection_tournament(population, nondominated_set, nondominated_check)
+
             for s, solution in enumerate(population):
                 solution_copy = crossover(instance, solution, parent_two if parent_two is not solution else selection_tournament(population, nondominated_set, nondominated_check, exclude_solution=solution), crossover_probability)
                 crossover_occurred = solution_copy is not solution # if the copy is equal to the original solution, this means that no copy happened and, therefore, crossover did not occur
