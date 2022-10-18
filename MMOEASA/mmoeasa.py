@@ -80,7 +80,7 @@ def crossover(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolutio
         return crossover1(instance, copy.deepcopy(I), population)
     return I
 
-def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], P_mutation: int, pending_copy: bool) -> Tuple[Union[MMOEASASolution, OmbukiSolution], bool]:
+def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], P_mutation: int, pending_copy: bool) -> Union[MMOEASASolution, OmbukiSolution]:
     if rand(1, 100) <= P_mutation:
         global mutation_invocations
         mutation_invocations += 1
@@ -89,26 +89,26 @@ def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution
 
         match rand(1, 10):
             case 1:
-                return mutation1(instance, solution_copy), True
+                return mutation1(instance, solution_copy)
             case 2:
-                return mutation2(instance, solution_copy), True
+                return mutation2(instance, solution_copy)
             case 3:
-                return mutation3(instance, solution_copy), True
+                return mutation3(instance, solution_copy)
             case 4:
-                return mutation4(instance, solution_copy), True
+                return mutation4(instance, solution_copy)
             case 5:
-                return mutation5(instance, solution_copy), True
+                return mutation5(instance, solution_copy)
             case 6:
-                return mutation6(instance, solution_copy), True
+                return mutation6(instance, solution_copy)
             case 7:
-                return mutation7(instance, solution_copy), True
+                return mutation7(instance, solution_copy)
             case 8:
-                return mutation8(instance, solution_copy), True
+                return mutation8(instance, solution_copy)
             case 9:
-                return mutation9(instance, solution_copy), True
+                return mutation9(instance, solution_copy)
             case 10:
-                return mutation10(instance, solution_copy), True
-    return I, False
+                return mutation10(instance, solution_copy)
+    return I
 
 def euclidean_distance_dispersion(instance: ProblemInstance, child: Union[MMOEASASolution, OmbukiSolution], parent: Union[MMOEASASolution, OmbukiSolution]) -> float:
     if instance.acceptance_criterion == "MMOEASA":
@@ -177,24 +177,30 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
             solution.temperature = solution.default_temperature
 
         while population[0].temperature > temperature_stop and not terminate:
-            parent_two = selection_tournament(population, nondominated_set, nondominated_check)
+            # parent_two = selection_tournament(population, nondominated_set, nondominated_check)
 
             for s, solution in enumerate(population):
-                solution_copy = crossover(instance, solution, parent_two if parent_two is not solution else selection_tournament(population, nondominated_set, nondominated_check, exclude_solution=solution), crossover_probability)
-                crossover_occurred = solution_copy is not solution # if the copy is equal to the original solution, this means that no copy happened and, therefore, crossover did not occur
-                mutations = 0
-                for _ in range(0, rand(1, MAX_SIMULTANEOUS_MUTATIONS)): # MMOEASA can perform up to three mutations in a single generation
-                    solution_copy, mutation_occurred = mutation(instance, mo_metropolis(instance, solution, solution_copy, solution.temperature, nondominated_check), mutation_probability, solution_copy is solution)
-                    if mutation_occurred:
-                        mutations += 1
+                child_solution = crossover(instance, solution, choice(list(filter(lambda s: s is not solution, population))), crossover_probability)# parent_two if parent_two is not solution else selection_tournament(population, nondominated_set, nondominated_check, exclude_solution=solution), crossover_probability)
+                crossover_occurred = child_solution is not solution # if the copy is equal to the original solution, this means that no copy happened and, therefore, crossover did not occur
+                # mutations = 0
+                # for _ in range(0, rand(1, MAX_SIMULTANEOUS_MUTATIONS)): # MMOEASA can perform up to three mutations in a single generation
+                #     solution_copy, mutation_occurred = mutation(instance, mo_metropolis(instance, solution, solution_copy, solution.temperature, nondominated_check), mutation_probability, solution_copy is solution)
+                #     if mutation_occurred:
+                #         mutations += 1
+                mutated_solution = mutation(instance, mo_metropolis(instance, solution, child_solution, solution.temperature, nondominated_check), mutation_probability, crossover_occurred)
+                mutation_occurred = mutated_solution is not child_solution and mutated_solution is not solution
 
-                population[s] = mo_metropolis(instance, solution, solution_copy, solution.temperature, nondominated_check)
-                # if the metropolis function chose to overwrite the parent and the child is feasible and the child was added to the non-dominated set
-                if population[s] is solution_copy and population[s].feasible and check_nondominated_set_acceptance(nondominated_set, solution_copy, nondominated_check):
-                    if crossover_occurred:
-                        crossover_successes += 1
-                    if mutations > 0:
-                        mutation_successes += mutations
+                if crossover_occurred or mutation_occurred:
+                    population[s] = mo_metropolis(instance, solution, mutated_solution, solution.temperature, nondominated_check)
+                    # if the metropolis function chose to overwrite the parent and the child is feasible and the child was added to the non-dominated set
+                    if population[s] is not solution and population[s].feasible:
+                        if check_nondominated_set_acceptance(nondominated_set, population[s], nondominated_check):
+                            if crossover_occurred:
+                                crossover_successes += 1
+                            if mutation_occurred:
+                                mutation_successes += 1
+                        # if mutations > 0:
+                        #     mutation_successes += mutations
 
                 """# uncomment this code if you'd like a solution to be written to a CSV
                 if instance.acceptance_criterion == "MMOEASA" and nondominated_set:
