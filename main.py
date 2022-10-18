@@ -82,9 +82,6 @@ if __name__ == '__main__':
         elif sys.argv[3].upper() not in {"MMOEASA", "OMBUKI"}:
             exc = ValueError(f"Acceptance criterion \"{sys.argv[3]}\" was not recognised")
             raise exc
-        elif sys.argv[1].upper() == "OMBUKI" and sys.argv[3].upper() == "MMOEASA":
-            exc = ValueError("Ombuki's Algorithm no longer supports MMOEASA's acceptance criterion; that is until a work-around is found for the weighted sum")
-            raise exc
         problem_instance = open_problem_instance(sys.argv[1].upper(), sys.argv[2], sys.argv[3].upper())
 
         nondominated_set, statistics = None, None
