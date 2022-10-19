@@ -317,6 +317,8 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
             new_generation.append(mutation_probability(instance, child_two, mutation, child_two is parent_two))
         num_rank_ones = pareto_rank(instance, new_generation)
 
+        # don't filter out duplicate solutions because we can't assume that Ombuki's original algorithm does this, right?
+        # nondominated_rank_ones = get_unique_set(list(filter(lambda s: s not in new_generation, get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated))))
         nondominated_rank_ones = list(filter(lambda s: s not in new_generation, get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)))
         new_generation[:len(nondominated_rank_ones)] = nondominated_rank_ones
         population = new_generation
@@ -329,6 +331,7 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
 
     global crossover_invocations, crossover_successes, mutation_invocations, mutation_successes
     statistics = {
+        "iterations": iterations,
         "initialiser_execution_time": f"{initialiser_execution_time} milliseconds",
         "feasible_initialisations": feasible_initialisations,
         "crossover_invocations": crossover_invocations,
