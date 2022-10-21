@@ -264,7 +264,7 @@ def DBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
 
     for d1 in range(1, first_vehicle.get_num_of_customers_visited()):
         for d2 in range(1, second_vehicle.get_num_of_customers_visited()):
-            if first_vehicle.current_capacity + second_vehicle.destinations[d2].node.demand < instance.capacity_of_vehicles and second_vehicle.current_capacity + first_vehicle.destinations[d1].node.demand > instance.capacity_of_vehicles:
+            if first_vehicle.current_capacity + second_vehicle.destinations[d2].node.demand < instance.capacity_of_vehicles and second_vehicle.current_capacity + first_vehicle.destinations[d1].node.demand < instance.capacity_of_vehicles:
                 first_distance_from_previous = instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, second_vehicle.destinations[d2].node.number)
                 second_distance_from_previous = instance.get_distance(second_vehicle.destinations[d2 - 1].node.number, first_vehicle.destinations[d1].node.number)
 
