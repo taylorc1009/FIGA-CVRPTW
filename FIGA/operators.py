@@ -1,7 +1,7 @@
 import copy
 from random import shuffle, choice, getrandbits
 from typing import List, Set
-from FIGA.parameters import MUTATION_FEASIBLE_SWAP_PROBABILITY, MUTATION_MAX_SLICE_LENGTH, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY
+from FIGA.parameters import MUTATION_FEASIBLE_SWAP_PROBABILITY, MUTATION_MAX_SLICE_LENGTH, MUTATION_SHORT_ROUTE_POOL_SIZE, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FEASIBLE_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
@@ -235,7 +235,9 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
 
     for d1, first_destination in enumerate(first_vehicle.get_customers_visited(), 1):
         for d2, second_destination in enumerate(second_vehicle.get_customers_visited(), 1):
-            if first_vehicle.current_capacity + second_destination.node.demand <= instance.capacity_of_vehicles and instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, second_destination.node.number) < instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, first_destination.node.number):
+            if instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, second_destination.node.number) < instance.get_distance(first_vehicle.destinations[d1 - 1].node.number, first_destination.node.number) \
+                and first_vehicle.current_capacity + second_destination.node.demand <= instance.capacity_of_vehicles \
+                and rand(1, 100) <= MUTATION_SWAP_PROBABILITY:
                 first_vehicle.destinations.insert(d1, copy.deepcopy(second_destination))
 
                 if first_vehicle.calculate_destinations_time_windows(instance, start_from=d1):
@@ -257,7 +259,7 @@ def DBT_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
     return solution
 
 def DBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Distance-based Swap Mutator
-    first_furthest_traveling_vehicle = get_far_traveling_vehicle(solution)
+    first_furthest_traveling_vehicle = select_random_vehicle(solution)
     first_vehicle, second_vehicle = solution.vehicles[first_furthest_traveling_vehicle], solution.vehicles[get_far_traveling_vehicle(solution, skip_vehicles={first_furthest_traveling_vehicle})]
 
     for d1 in range(1, first_vehicle.get_num_of_customers_visited()):
@@ -439,9 +441,9 @@ def FBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolut
 
     return solution
 
-def select_short_route(solution: FIGASolution) -> int:
-    vehicles = sorted(range(len(solution.vehicles)), key=lambda v: solution.vehicles[v].get_num_of_customers_visited())
-    return choice(vehicles[:min(3, round(len(vehicles) / 2))])
+def select_short_route(solution: FIGASolution) -> Vehicle:
+    vehicles = sorted(solution.vehicles, key=lambda v: v.get_num_of_customers_visited())
+    return choice(vehicles[:min(MUTATION_SHORT_ROUTE_POOL_SIZE, round(len(vehicles) / 2))])
 
 def try_feasible_reallocation(instance: ProblemInstance, solution: FIGASolution, random_origin_vehicle: Vehicle, origin_position: int) -> bool:
     shuffle(solution.vehicles)
@@ -462,7 +464,7 @@ def try_feasible_reallocation(instance: ProblemInstance, solution: FIGASolution,
 
 def VE_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Vehicle Elimination Mutator
     # select a random vehicle and try to move all of its destinations into feasible positions in other vehicles; destinations that cannot be moved will remain in the original randomly selected vehicle
-    random_origin_vehicle = solution.vehicles[select_short_route(solution) if rand(1, 100) < MUTATION_ELIMINATE_SHORTEST_PROBABILITY else select_random_vehicle(solution)]
+    random_origin_vehicle = select_short_route(solution) if rand(1, 100) < MUTATION_ELIMINATE_SHORTEST_PROBABILITY else solution.vehicles[select_random_vehicle(solution)]
     original_length = random_origin_vehicle.get_num_of_customers_visited()
 
     origin_position = 1
