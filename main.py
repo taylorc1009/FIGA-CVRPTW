@@ -164,9 +164,9 @@ if __name__ == '__main__':
         match args.algorithm:
             case "MMOEASA":
                 nondominated_set, statistics = execute_MMOEASA(problem_instance)
-            case "Ombuki":
-                nondominated_set, statistics = execute_Ombuki(problem_instance, True)
             case "Ombuki-Original":
+                nondominated_set, statistics = execute_Ombuki(problem_instance, True)
+            case "Ombuki":
                 nondominated_set, statistics = execute_Ombuki(problem_instance, False)
             case "FIGA":
                 nondominated_set, statistics = execute_FIGA(problem_instance)

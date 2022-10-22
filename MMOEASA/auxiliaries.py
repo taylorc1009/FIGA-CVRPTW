@@ -15,7 +15,7 @@ def ombuki_is_nondominated(old_solution: OmbukiSolution, new_solution: OmbukiSol
 
 def check_nondominated_set_acceptance(nondominated_set: List[Union[MMOEASASolution, OmbukiSolution]], subject_solution: Union[MMOEASASolution, OmbukiSolution], nondominated_check: Callable[[Union[OmbukiSolution, MMOEASASolution], Union[OmbukiSolution, MMOEASASolution]], bool]) -> bool:
     if not subject_solution.feasible:
-        return False
+        return# False
 
     nondominated_set.append(subject_solution)
     solutions_to_remove = set()
