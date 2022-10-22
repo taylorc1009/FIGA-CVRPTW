@@ -116,7 +116,7 @@ def euclidean_distance_dispersion(instance: ProblemInstance, child: Union[MMOEAS
         x1, y1 = child.total_distance, child.cargo_unbalance
         x2, y2 = parent.total_distance, parent.cargo_unbalance
         return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_cargo_unbalance) ** 2)
-    elif instance.acceptance_criterion == "OMBUKI":
+    elif instance.acceptance_criterion == "Ombuki":
         x1, y1 = child.total_distance, child.num_vehicles
         x2, y2 = parent.total_distance, parent.num_vehicles
         return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
@@ -154,6 +154,7 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
     nondominated_set: List[Union[MMOEASASolution, OmbukiSolution]] = list()
 
     global initialiser_execution_time, feasible_initialisations, crossover_successes, mutation_successes
+    feasible_initialisations = 0
     start = process_time()
     # the population is initialised with "population_size" amount of TWIH_solution copies
     TWIH_solution = TWIH(instance)

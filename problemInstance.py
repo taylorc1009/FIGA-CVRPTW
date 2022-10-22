@@ -36,6 +36,6 @@ class ProblemInstance:
             self.Hypervolume_distance_unbalance = float(args[1])
             self.Hypervolume_cargo_unbalance = float(args[2])
             print(f"Hypervolumes modified: TD={self.Hypervolume_total_distance}, DU={self.Hypervolume_distance_unbalance}, CU={self.Hypervolume_cargo_unbalance}")
-        elif acceptance_criterion == "OMBUKI":
+        elif acceptance_criterion == "Ombuki":
             self.Hypervolume_num_vehicles = int(args[1])
             print(f"Hypervolumes modified: TD={self.Hypervolume_total_distance}, NV={self.Hypervolume_num_vehicles}")

@@ -350,6 +350,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     nondominated_set: List[FIGASolution] = list()
 
     global initialiser_execution_time, feasible_initialisations, mutation_acceptances, crossover_acceptances
+    feasible_initialisations = 0
     start = process_time()
     for i in range(0, population_size):
         population.insert(i, DTWIH_III(instance, i))

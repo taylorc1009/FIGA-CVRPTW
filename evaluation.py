@@ -9,11 +9,12 @@ from problemInstance import ProblemInstance
 def calculate_area(problem_instance: ProblemInstance, nondominated_set: List[Union[MMOEASASolution, OmbukiSolution]], acceptance_criterion: str) -> None:
     area = 0.0
     if len(nondominated_set) > 0:
-        if acceptance_criterion.upper() == "MMOEASA":
+        if acceptance_criterion == "MMOEASA":
             area = MMOEASA_median_hypervolumes(nondominated_set, MMOEASA_ref_point(problem_instance))
-        elif acceptance_criterion.upper() == "OMBUKI":
+        elif acceptance_criterion == "Ombuki":
             area = Ombuki_median_hypervolumes(nondominated_set, Ombuki_ref_point(problem_instance))
 
         area = round(area, 2)
 
     print(f"{os.linesep}Graph area occupied: {area}%")
+    return area

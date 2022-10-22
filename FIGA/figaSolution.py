@@ -51,7 +51,7 @@ class FIGASolution(Solution):
         try:
             with open(relative_path, 'r') as file:
                 problem_path = file.readline().strip() # because the problem name is the first line in the text files, this line quickly adds it to a variable (so we can add it to a "ProblemInstance" object later"
-                instance = open_problem_instance("FIGA", problem_path, "OMBUKI")
+                instance = open_problem_instance("FIGA", problem_path, "Ombuki")
                 for line in file:
                     cur_line = line.split()[0]
                     solution.vehicles.append(Vehicle.create_route(instance, [instance.nodes[int(n)] for n in cur_line.split(',')]))
