@@ -338,7 +338,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         d_pt_pt = d_df / temperature ** 2
         d_exp = exp(-1.0 * d_pt_pt)
 
-        if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
+        if (random.randint(INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
             metropolis_returns[3] += 1
             return child
         else:

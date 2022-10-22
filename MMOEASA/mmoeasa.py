@@ -1,5 +1,5 @@
 import copy
-from random import choice, getrandbits
+from random import choice
 from time import process_time
 from itertools import islice
 from MMOEASA.auxiliaries import is_nondominated, ombuki_is_nondominated, check_nondominated_set_acceptance
@@ -13,7 +13,7 @@ from vehicle import Vehicle
 from constants import INT_MAX
 from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
 from typing import Callable, Deque, List, Tuple, Union, Dict
-from numpy import sqrt, exp
+from numpy import sqrt, exp, random
 
 initialiser_execution_time: int=0
 feasible_initialisations: int=0
@@ -136,7 +136,7 @@ def mo_metropolis(instance: ProblemInstance, parent: Union[MMOEASASolution, Ombu
         d_pt_pt = d_df / temperature ** 2
         d_exp = exp(-1.0 * d_pt_pt) # Metropolis criterion
 
-        if (rand(0, INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
+        if (random.randint(INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
             return child
         else:
             return parent
