@@ -41,7 +41,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[Union[MMOEASASoluti
         if i != len(nondominated_set):
             del nondominated_set[i:]
 
-    return subject_solution in nondominated_set
+    # return subject_solution in nondominated_set
 
 def insert_unvisited_node(solution: Union[MMOEASASolution, OmbukiSolution], instance: ProblemInstance, node: int) -> Union[MMOEASASolution, OmbukiSolution]:
     inserted = False

@@ -202,7 +202,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                 i += 1
         if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
             del nondominated_set[i:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
-            return process_time() if subject_solution in nondominated_set else None
+            # return process_time() if subject_solution in nondominated_set else None
 
 def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
     i = 0
@@ -234,8 +234,8 @@ def selection_tournament(nondominated_set: List[FIGASolution], population: List[
 
 def try_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < crossover_probability:
-        global crossover_invocations, crossover_acceptances
-        crossover_invocations += 1
+        # global crossover_invocations
+        # crossover_invocations += 1
 
         crossover_solution = None
         crossover = rand(1 if len(parent_one.vehicles) < instance.amount_of_vehicles else 2, 3)
@@ -254,8 +254,8 @@ def try_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_tw
 
 def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int, temperature_min: float) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < mutation_probability:
-        global mutation_invocations, mutation_acceptances
-        mutation_invocations += 1
+        # global mutation_invocations
+        # mutation_invocations += 1
 
         mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
         mutator = rand(1 if solution.temperature > temperature_min else 3, 9)
@@ -316,16 +316,16 @@ def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution
     return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
 
 def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, population: List[FIGASolution]=None) -> FIGASolution:
-    global metropolis_returns
+   #  global metropolis_returns
     if not population:
         population = []
     duplicate = any(check_are_identical(child, solution) for solution in population)
 
     if is_nondominated(parent, child) and not duplicate:
-        metropolis_returns[1] += 1
+        # metropolis_returns[1] += 1
         return child
     elif temperature < 0.0001:
-        metropolis_returns[2] += 1
+        # metropolis_returns[2] += 1
         return parent
     else:
         # d_df is a simulated deterioration (difference between the new and old solution) between the multi-objective variables
@@ -339,10 +339,10 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         d_exp = exp(-1.0 * d_pt_pt)
 
         if (random.randint(INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
-            metropolis_returns[3] += 1
+            # metropolis_returns[3] += 1
             return child
         else:
-            metropolis_returns[4] += 1
+            # metropolis_returns[4] += 1
             return parent
 
 def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[FIGASolution], Dict[str, int]]:
@@ -376,35 +376,36 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution is not crossover_parent_two else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
             if crossover:
                 check_nondominated_set_acceptance(nondominated_set, child)
-            mutations = []
+            # mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
                 child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_min)
                 if mutator:
                     check_nondominated_set_acceptance(nondominated_set, child)
-                mutations.append(mutator)
+                # mutations.append(mutator)
 
             if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, population=population) is not solution:
                 population[s] = child
+                check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
+                
+                # nds_update = check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
+                # if nds_update:
+                #     last_nds_update = nds_update - start
+                #     nds_str = ""
+                #     for s_aux, solution in enumerate(nondominated_set):
+                #         nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s_aux < len(nondominated_set) - 1 else "")
+                #     print(nds_str)
 
-                nds_update = check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
-                if nds_update:
-                    last_nds_update = nds_update - start
-                    nds_str = ""
-                    for s_aux, solution in enumerate(nondominated_set):
-                        nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s_aux < len(nondominated_set) - 1 else "")
-                    print(nds_str)
-
-                if crossover:
-                    if not crossover in crossover_acceptances:
-                        crossover_acceptances[crossover] = 1
-                    else:
-                        crossover_acceptances[crossover] += 1
-                if mutations:
-                    for mutator in filter(lambda m: m, mutations):
-                        if not mutator in mutation_acceptances:
-                            mutation_acceptances[mutator] = 1
-                        else:
-                            mutation_acceptances[mutator] += 1
+                # if crossover:
+                #     if not crossover in crossover_acceptances:
+                #         crossover_acceptances[crossover] = 1
+                #     else:
+                #         crossover_acceptances[crossover] += 1
+                # if mutations:
+                #     for mutator in filter(lambda m: m, mutations):
+                #         if not mutator in mutation_acceptances:
+                #             mutation_acceptances[mutator] = 1
+                #         else:
+                #             mutation_acceptances[mutator] += 1
 
             population[s].temperature *= population[s].cooling_rate
         iterations += 1
@@ -426,7 +427,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
         "mutation_acceptances": dict(sorted(mutation_acceptances.items())),
         "total_accepted_mutations": sum(mutation_acceptances.values()),
         "metropolis_returns": metropolis_returns,
-        "final_nondominated_set_update": f"{round(last_nds_update, 1)}s"
+        "final_nondominated_set_update": f"{round(last_nds_update, 1)}s" if last_nds_update else None
     }
 
     return nondominated_set, statistics

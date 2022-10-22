@@ -74,16 +74,16 @@ def calculate_cooling(i: int, temperature_max: float, temperature_min: float, te
 
 def crossover(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], population: List[Union[MMOEASASolution, OmbukiSolution]], P_crossover: int) -> Union[MMOEASASolution, OmbukiSolution]:
     if rand(1, 100) <= P_crossover:
-        global crossover_invocations
-        crossover_invocations += 1
+        # global crossover_invocations
+        # crossover_invocations += 1
 
         return crossover1(instance, copy.deepcopy(I), population)
     return I
 
 def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], P_mutation: int, pending_copy: bool) -> Union[MMOEASASolution, OmbukiSolution]:
     if rand(1, 100) <= P_mutation:
-        global mutation_invocations
-        mutation_invocations += 1
+        # global mutation_invocations
+        # mutation_invocations += 1
 
         solution_copy = copy.deepcopy(I) if pending_copy else I
 
@@ -194,11 +194,12 @@ def MMOEASA(instance: ProblemInstance, population_size: int, multi_starts: int, 
                     population[s] = mo_metropolis(instance, solution, mutated_solution, solution.temperature, nondominated_check)
                     # if the metropolis function chose to overwrite the parent and the child is feasible and the child was added to the non-dominated set
                     if population[s] is not solution and population[s].feasible:
-                        if check_nondominated_set_acceptance(nondominated_set, population[s], nondominated_check):
+                        check_nondominated_set_acceptance(nondominated_set, population[s], nondominated_check)
+                        """if check_nondominated_set_acceptance(nondominated_set, population[s], nondominated_check):
                             if crossover_occurred:
                                 crossover_successes += 1
                             if mutation_occurred:
-                                mutation_successes += 1
+                                mutation_successes += 1"""
                         # if mutations > 0:
                         #     mutation_successes += mutations
 

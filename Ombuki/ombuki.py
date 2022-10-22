@@ -259,25 +259,25 @@ def crossover_probability(instance: ProblemInstance, parent_one: Union[OmbukiSol
     parent_one_copy, parent_two_copy = copy.deepcopy(parent_one), copy.deepcopy(parent_two) # we always need to make a deep copy because we don't want multiple instances of the same solution in the new generation
 
     if rand(1, 100) < probability:
-        global crossover_invocations, crossover_successes
-        crossover_invocations += 1
+        # global crossover_invocations, crossover_successes
+        # crossover_invocations += 1
 
         return crossover(instance, parent_one_copy, parent_two_copy, use_original)
     return parent_one_copy, parent_two_copy
 
 def mutation_probability(instance: ProblemInstance, solution: Union[OmbukiSolution, MMOEASASolution], probability: int, pending_copy: bool) -> Union[OmbukiSolution, MMOEASASolution]:
     if rand(1, 100) < probability:
-        global mutation_invocations, mutation_successes
-        mutation_invocations += 1
+        # global mutation_invocations, mutation_successes
+        # mutation_invocations += 1
 
         mutated_solution = mutation(instance, copy.deepcopy(solution))
 
         if instance.acceptance_criterion == "MMOEASA":
             if mmoeasa_is_nondominated(solution, mutated_solution):
-                mutation_successes += 1
+                # mutation_successes += 1
                 return mutated_solution
         elif is_nondominated(solution, mutated_solution):
-            mutation_successes += 1
+            # mutation_successes += 1
             return mutated_solution
     return copy.deepcopy(solution) if pending_copy else solution # we always need to make a deep copy because we don't want multiple instances of the same solution in the new generation
 
