@@ -9,7 +9,7 @@ from vehicle import Vehicle
 from destination import Destination
 from Ombuki.auxiliaries import get_nondominated_set, get_unique_set, is_nondominated, mmoeasa_is_nondominated
 from numpy import round
-from random import choice, sample
+from random import choice, sample, shuffle
 from Ombuki.constants import TOURNAMENT_SET_SIZE, TOURNAMENT_PROBABILITY_SELECT_BEST, GREEDY_PERCENT
 from constants import INT_MAX
 from common import check_are_identical, rand, check_iterations_termination_condition, check_seconds_termination_condition
@@ -23,12 +23,20 @@ mutation_successes: int=0
 
 def generate_random_solution(instance: ProblemInstance, _id: int) -> Union[OmbukiSolution, MMOEASASolution]:
     solution = OmbukiSolution(_id=_id) if instance.acceptance_criterion == "Ombuki" else MMOEASASolution(_id=_id)
+    nodes = list(instance.nodes.values())[1:]
+    shuffle(nodes)
 
-    for i in range(1, len(instance.nodes)):
-        infeasible_vehicles = set()
-        inserted = False
-        while not inserted:
-            vehicle = rand(0, instance.amount_of_vehicles - 1, exclude_values=infeasible_vehicles) # generate a random number between 1 and max vehicles instead of 1 to current num of vehicles; to keep the original probability of inserting the node to a new vehicle
+    for node in nodes:
+        feasible_vehicles = list(filter(lambda v: v.current_capacity + node.demand < instance.capacity_of_vehicles, solution.vehicles))
+        vehicle = choice(feasible_vehicles) if feasible_vehicles else None
+        
+        if vehicle is None:
+            solution.vehicles.append(Vehicle.create_route(instance, node=node))
+            solution.vehicles[-1].current_capacity = node.demand
+        else:
+            vehicle.destinations.insert(len(vehicle.destinations) - 1, Destination(node=node))
+            vehicle.current_capacity += node.demand
+            """vehicle = rand(0, instance.amount_of_vehicles - 1, exclude_values=infeasible_vehicles) # generate a random number between 1 and max vehicles instead of 1 to current num of vehicles; to keep the original probability of inserting the node to a new vehicle
 
             if vehicle < len(solution.vehicles) and solution.vehicles[vehicle].current_capacity + instance.nodes[i].demand <= instance.capacity_of_vehicles:
                 solution.vehicles[vehicle].destinations.insert(len(solution.vehicles[vehicle].destinations) - 1, Destination(node=instance.nodes[i]))
@@ -39,7 +47,7 @@ def generate_random_solution(instance: ProblemInstance, _id: int) -> Union[Ombuk
                 solution.vehicles[-1].current_capacity = instance.nodes[i].demand
                 inserted = True
             else:
-                infeasible_vehicles.add(vehicle)
+                infeasible_vehicles.add(vehicle)"""
 
     solution.calculate_length_of_routes(instance)
     solution.calculate_routes_time_windows(instance)
