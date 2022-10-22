@@ -134,7 +134,7 @@ if __name__ == '__main__':
         choices=["MMOEASA", "Ombuki"],
         help=f"The acceptance criteria available are:{os.linesep}"
             f" - MMOEASA,{os.linesep}"
-            f" - Ombuki (note that \"Ombuki-Original\" is also an algorithm; it contains features that seem to be anomalous from the original research paper).{os.linesep}{os.linesep}"
+            f" - Ombuki.{os.linesep}{os.linesep}"
             f"FIGA should not be used as and does not accept an alternative acceptance criterion. It uses Ombuki's criterion by default.{os.linesep}{os.linesep}"
     )
 
@@ -157,7 +157,8 @@ if __name__ == '__main__':
     results = []
 
     for run in range(args.runs):
-        print(f"Started run {run + 1} of {args.runs}")
+        if args.runs > 1:
+            print(f"Started run {run + 1} of {args.runs}")
 
         nondominated_set, statistics = None, None
         match args.algorithm:
