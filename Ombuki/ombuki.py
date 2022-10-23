@@ -312,24 +312,27 @@ def Ombuki(instance: ProblemInstance, population_size: int, termination_conditio
     terminate = False
     iterations = 0
     while not terminate:
-        for i, solution in enumerate(population):
-            if not solution.feasible: # the routing scheme is likely destructive of good solutions and will have no effect on feasible solutions, so only execute it on infeasible solutions
-                population[i] = routing_scheme(instance, solution, use_original_operators)
-
         new_generation = []
+
         for _ in range(int(round(population_size / 2))):
             parent_one = selection_tournament(instance, population)
             parent_two = selection_tournament(instance, population, exclude_solution=parent_one)
 
             child_one, child_two = crossover_probability(instance, parent_one, parent_two, crossover, use_original_operators)
-            new_generation.append(mutation_probability(instance, child_one, mutation, child_one is parent_one))
-            new_generation.append(mutation_probability(instance, child_two, mutation, child_two is parent_two))
+
+            mutated_solution_one = mutation_probability(instance, child_one, mutation, child_one is parent_one)
+            mutated_solution_two = mutation_probability(instance, child_two, mutation, child_two is parent_two)
+
+            # the routing scheme is likely destructive of good solutions and will have no effect on feasible solutions, so only execute it on infeasible solutions
+            new_generation.append(mutated_solution_one if mutated_solution_one.feasible else routing_scheme(instance, mutated_solution_one, use_original_operators))
+            new_generation.append(mutated_solution_two if mutated_solution_two.feasible else routing_scheme(instance, mutated_solution_two, use_original_operators))
         num_rank_ones = pareto_rank(instance, new_generation)
 
-        # don't filter out duplicate solutions because we can't assume that Ombuki's original algorithm does this, right?
-        # nondominated_rank_ones = get_unique_set(list(filter(lambda s: s not in new_generation, get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated))))
-        nondominated_rank_ones = list(filter(lambda s: s not in new_generation, get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)))
-        new_generation[:len(nondominated_rank_ones)] = nondominated_rank_ones
+        if list(filter(lambda s: s.feasible, population)): # if the population contains any workable (feasible) solutions, then check if we should retain any of them in the new generation (via elitism), otherwise just use the new generation
+            # don't filter out duplicate solutions because we can't assume that Ombuki's original algorithm does this, right?
+            # nondominated_rank_ones = get_unique_set(list(filter(lambda s: s not in new_generation, get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated))))#
+            nondominated_rank_ones = list(filter(lambda s: s not in new_generation, get_nondominated_set(list(filter(lambda s: s.rank == 1, population + new_generation)), mmoeasa_is_nondominated if instance.acceptance_criterion == "MMOEASA" else is_nondominated)))
+            new_generation[:len(nondominated_rank_ones)] = nondominated_rank_ones
         population = new_generation
 
         iterations += 1

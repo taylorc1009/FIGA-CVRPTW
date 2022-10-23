@@ -47,25 +47,24 @@ def original_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution
     shuffle(randomized_destinations)
     for d in randomized_destinations:
         parent_destination = parent_vehicle.destinations[d]
-        best_vehicle, best_position = INT_MAX, 0
-        shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
+        best_vehicle, best_position = -1, 0
+        shortest_distance = float(INT_MAX)
         found_feasible_location = False
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
             if not vehicle.current_capacity + parent_destination.node.demand > instance.capacity_of_vehicles:
                 for j in range(1, len(crossover_solution.vehicles[i].destinations)):
-                    distance_from_previous = instance.get_distance(vehicle.destinations[j - 1].node.number, parent_destination.node.number)
-                    distance_to_next = instance.get_distance(parent_destination.node.number, vehicle.destinations[j].node.number)
+                    vehicle.destinations.insert(j, copy.deepcopy(parent_destination))
 
-                    simulated_arrival_time = vehicle.destinations[j - 1].departure_time + distance_from_previous
-                    if simulated_arrival_time < parent_destination.node.ready_time:
-                        simulated_arrival_time = parent_destination.node.ready_time
-                    simulated_departure_time = simulated_arrival_time + parent_destination.node.service_duration
+                    if vehicle.calculate_destinations_time_windows(instance, start_from=j):
+                        vehicle.calculate_length_of_route(instance)
+                        if vehicle.route_distance < shortest_distance:
+                            best_vehicle, best_position, shortest_distance = i, j, vehicle.route_distance
+                            found_feasible_location = True
+                    
+                    vehicle.destinations.pop(j)
+                    vehicle.calculate_destinations_time_windows(instance, start_from=j)
 
-                    if not (simulated_arrival_time > parent_destination.node.due_date or simulated_departure_time + distance_to_next > vehicle.destinations[j].node.due_date) \
-                            and (distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next):
-                        best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
-                        found_feasible_location = True
 
         if not found_feasible_location:
             best_vehicle = len(crossover_solution.vehicles)
@@ -90,33 +89,31 @@ def modified_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution
     for d in randomized_destinations:
         parent_destination = parent_vehicle.destinations[d]
         best_vehicle, best_position = -1, 0
-        shortest_from_previous, shortest_to_next = (float(INT_MAX),) * 2
+        shortest_distance = float(INT_MAX)
         found_feasible_location = False
 
         for i, vehicle in enumerate(crossover_solution.vehicles):
             if not vehicle.current_capacity + parent_destination.node.demand > instance.capacity_of_vehicles:
                 for j in range(1, len(crossover_solution.vehicles[i].destinations)):
-                    distance_from_previous = instance.get_distance(vehicle.destinations[j - 1].node.number, parent_destination.node.number)
-                    distance_to_next = instance.get_distance(parent_destination.node.number, vehicle.destinations[j].node.number)
+                    vehicle.destinations.insert(j, copy.deepcopy(parent_destination))
 
-                    simulated_arrival_time = vehicle.destinations[j - 1].departure_time + distance_from_previous
-                    if simulated_arrival_time < parent_destination.node.ready_time:
-                        simulated_arrival_time = parent_destination.node.ready_time
-                    simulated_departure_time = simulated_arrival_time + parent_destination.node.service_duration
-
-                    if not (simulated_arrival_time > parent_destination.node.due_date or simulated_departure_time + distance_to_next > vehicle.destinations[j].node.due_date) \
-                            and (distance_from_previous < shortest_from_previous and distance_to_next <= shortest_to_next) or (distance_from_previous <= shortest_from_previous and distance_to_next < shortest_to_next):
-                        best_vehicle, best_position, shortest_from_previous, shortest_to_next = i, j, distance_from_previous, distance_to_next
-                        found_feasible_location = True
+                    if vehicle.calculate_destinations_time_windows(instance, start_from=j):
+                        vehicle.calculate_length_of_route(instance)
+                        if vehicle.route_distance < shortest_distance:
+                            best_vehicle, best_position, shortest_distance = i, j, vehicle.route_distance
+                            found_feasible_location = True
+                    
+                    vehicle.destinations.pop(j)
+                    vehicle.calculate_destinations_time_windows(instance, start_from=j)
 
         if not found_feasible_location:
             if len(crossover_solution.vehicles) < instance.amount_of_vehicles:
                 best_vehicle = len(crossover_solution.vehicles)
                 crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination.node))
             else:
-                sorted_with_index = sorted(crossover_solution.vehicles, key=lambda veh: instance.get_distance(veh.destinations[-2].node.number, parent_destination.node.number))
-                for infeasible_vehicle in sorted_with_index:
-                    if infeasible_vehicle.current_capacity + parent_destination.node.demand < instance.capacity_of_vehicles:
+                sorted_by_nearest = sorted(crossover_solution.vehicles, key=lambda veh: instance.get_distance(veh.destinations[-2].node.number, parent_destination.node.number))
+                for infeasible_vehicle in sorted_by_nearest:
+                    if infeasible_vehicle.current_capacity + parent_destination.node.demand <= instance.capacity_of_vehicles:
                         infeasible_vehicle.destinations.insert(infeasible_vehicle.get_num_of_customers_visited() + 1, copy.deepcopy(parent_destination))
                         break
         else:
