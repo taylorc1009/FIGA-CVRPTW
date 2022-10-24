@@ -202,7 +202,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                 i += 1
         if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
             del nondominated_set[i:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
-            return process_time() if subject_solution in nondominated_set else None
+            # return process_time() if subject_solution in nondominated_set else None
 
 def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
     i = 0
