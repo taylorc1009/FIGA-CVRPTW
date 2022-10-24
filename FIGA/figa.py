@@ -202,7 +202,7 @@ def check_nondominated_set_acceptance(nondominated_set: List[FIGASolution], subj
                 i += 1
         if i != len(nondominated_set): # i will not equal the non-dominated set length if there are solutions to remove
             del nondominated_set[i:] # MMOEASA limits its non-dominated set to 20, so do the same here (this is optional)
-            # return process_time() if subject_solution in nondominated_set else None
+            return process_time() if subject_solution in nondominated_set else None
 
 def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGASolution) -> None:
     i = 0
@@ -257,32 +257,40 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         # global mutation_invocations
         # mutation_invocations += 1
 
-        mutated_solution = copy.deepcopy(solution) # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
-        mutator = rand(1 if solution.temperature > temperature_min else 3, 9)
+        failed_mutators = set()
+        mutated_solution, result = copy.deepcopy(solution), None # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
 
-        match mutator:
-            case 1:
-                mutated_solution = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
-            case 2:
-                mutated_solution = TWBR_mutation(instance, mutated_solution) # Time-Window-based Move Forward Mutator
-            case 3:
-                mutated_solution = PBS_mutator(instance, mutated_solution) # Partition-based Swap Mutator
-            case 4:
-                mutated_solution = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
-            case 5:
-                mutated_solution = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
-            case 6:
-                mutated_solution = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
-            case 7:
-                mutated_solution = VE_mutation(instance, mutated_solution) # Vehicle Elimination Mutator
-            case 8:
-                mutated_solution = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
-            case 9:
-                mutated_solution = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
-        """case 11:
-            mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time Based Reorder Mutator"""
+        while result is None:
+            mutator = rand(1 if solution.temperature > temperature_min else 3,9, exclude_values=failed_mutators)
 
-        return mutated_solution, mutator
+            match mutator:
+                case 1:
+                    result = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
+                case 2:
+                    result = TWBR_mutation(instance, mutated_solution) # Time-Window-based Reorder Mutator
+                case 3:
+                    result = PBS_mutator(instance, mutated_solution) # Partition-based Swap Mutator
+                case 4:
+                    result = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
+                case 5:
+                    result = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
+                case 6:
+                    result = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
+                case 7:
+                    result = VE_mutation(instance, mutated_solution) # Vehicle Elimination Mutator
+                case 8:
+                    result = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
+                case 9:
+                    result = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
+            """
+            case 11:
+                mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time Based Reorder Mutator"""
+
+            if result is None:
+                if (solution.temperature > temperature_min and len(failed_mutators) == 8) or (solution.temperature <= temperature_min and len(failed_mutators) == 6):
+                    return solution, None
+                failed_mutators.add(mutator)
+        return result, mutator
     return solution, None
 
 def calculate_cooling(i: int, temperature_max: float, temperature_min: float, temperature_stop: float, population_size: int, termination_condition: int) -> float:
@@ -316,7 +324,7 @@ def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution
     return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
 
 def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, population: List[FIGASolution]=None) -> FIGASolution:
-   #  global metropolis_returns
+    # global metropolis_returns
     if not population:
         population = []
     duplicate = any(check_are_identical(child, solution) for solution in population)
@@ -377,25 +385,29 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             child, crossover = try_crossover(instance, solution, crossover_parent_two if solution is not crossover_parent_two else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
             if crossover:
                 check_nondominated_set_acceptance(nondominated_set, child)
-            # mutations = []
-            for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_min)
-                if mutator:
-                    check_nondominated_set_acceptance(nondominated_set, child)
-                # mutations.append(mutator)
-
-            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, population=population) is not solution:
-                population[s] = child
-                check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
-                
-                # nds_update = check_nondominated_set_acceptance(nondominated_set, population[s]) # this procedure will add the dominating child to the non-dominated set for us, if it should be there
+                # nds_update = check_nondominated_set_acceptance(nondominated_set, child)
                 # if nds_update:
                 #     last_nds_update = nds_update - start
                 #     nds_str = ""
                 #     for s_aux, solution in enumerate(nondominated_set):
                 #         nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s_aux < len(nondominated_set) - 1 else "")
                 #     print(nds_str)
+            # mutations = []
+            for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
+                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_min)
+                if mutator:
+                    check_nondominated_set_acceptance(nondominated_set, child)
+                    # nds_update = check_nondominated_set_acceptance(nondominated_set, child)
+                    # if nds_update:
+                    #     last_nds_update = nds_update - start
+                    #     nds_str = ""
+                    #     for s_aux, solution in enumerate(nondominated_set):
+                    #         nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s_aux < len(nondominated_set) - 1 else "")
+                    #     print(nds_str)
+                # mutations.append(mutator)
 
+            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, population=population) is not solution:
+                population[s] = child
                 # if crossover:
                 #     if not crossover in crossover_acceptances:
                 #         crossover_acceptances[crossover] = 1
