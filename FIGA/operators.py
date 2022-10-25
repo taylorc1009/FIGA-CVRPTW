@@ -1,7 +1,7 @@
 import copy
 from random import shuffle, choice, getrandbits
 from typing import List, Set
-from FIGA.parameters import MUTATION_MAX_SLICE_LENGTH, MUTATION_SHORT_ROUTE_POOL_SIZE, MUTATION_SWAP_PROBABILITY, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FBS_SWAPS, MUTATION_MAX_LDHR_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY
+from FIGA.parameters import MUTATION_MAX_SLICE_LENGTH, MUTATION_SHORT_ROUTE_POOL_SIZE, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FBS_SWAPS, MUTATION_MAX_LDHR_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
@@ -199,13 +199,18 @@ def swap(instance: ProblemInstance, vehicle_one: Vehicle, index_one: int, index_
 def TWBS_mutation(instance: ProblemInstance, solution: FIGASolution) -> FIGASolution: # Time-Window-based Swap Mutator
     vehicle = solution.vehicles[select_route_with_longest_wait(solution)]
     reverse = rand(1, 100) < MUTATION_REVERSE_SWAP_PROBABILITY
+    possible_swaps = []
 
     for d in range(1, vehicle.get_num_of_customers_visited()):
         if (not reverse and vehicle.destinations[d].node.ready_time > vehicle.destinations[d + 1].node.ready_time) \
-            or (reverse and vehicle.destinations[d].node.ready_time < vehicle.destinations[d + 1].node.ready_time and rand(1, 100) < MUTATION_SWAP_PROBABILITY):
-            swap(instance, vehicle, d, d + 1)
-            break
+            or (reverse and vehicle.destinations[d].node.ready_time < vehicle.destinations[d + 1].node.ready_time):
+            possible_swaps.append(d)
 
+    if not possible_swaps:
+        return None
+
+    destination = choice(possible_swaps)
+    swap(instance, vehicle, destination, destination + 1)
     vehicle.calculate_length_of_route(instance)
     solution.objective_function(instance)
 

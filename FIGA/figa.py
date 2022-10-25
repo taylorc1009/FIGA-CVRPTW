@@ -288,7 +288,7 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
 
             if result is None:
                 if (solution.temperature > temperature_min and len(failed_mutators) == 8) or (solution.temperature <= temperature_min and len(failed_mutators) == 6):
-                    return solution, None
+                    break
                 failed_mutators.add(mutator)
         return result, mutator
     return solution, None
@@ -394,7 +394,11 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                 #     print(nds_str)
             # mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_min)
+                mutated_child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_min)
+                if mutated_child is not None:
+                    child = mutated_child
+                else:
+                    break
                 if mutator:
                     check_nondominated_set_acceptance(nondominated_set, child)
                     # nds_update = check_nondominated_set_acceptance(nondominated_set, child)
