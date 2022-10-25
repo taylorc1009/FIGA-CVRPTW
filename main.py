@@ -1,4 +1,3 @@
-import sys
 import os
 from argparse import ArgumentParser, RawTextHelpFormatter
 from collections import deque
@@ -24,70 +23,6 @@ def execute_Ombuki(problem_instance: ProblemInstance, use_original: bool) -> Tup
 def execute_FIGA(problem_instance: ProblemInstance) -> Tuple[List[FIGASolution], Dict[str, int]]:
     from FIGA.parameters import POPULATION_SIZE, TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_SECONDS, TERMINATION_CONDITION_TYPE, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP, NUM_PROGRESS_OUTPUTS, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY
     return FIGA(problem_instance, POPULATION_SIZE, TERMINATION_CONDITION_SECONDS if TERMINATION_CONDITION_TYPE == "seconds" else TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_TYPE, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP, deque([(TERMINATION_CONDITION_SECONDS / 10) * step if TERMINATION_CONDITION_TYPE == "seconds" else (TERMINATION_CONDITION_ITERATIONS / 10) * step for step in range(NUM_PROGRESS_OUTPUTS)]))
-
-"""if __name__ == '__main__':
-    argc = len(sys.argv)
-    if not 2 <= argc <= 4 or (argc == 2 and sys.argv[1] not in {"--help", "-h"}):
-        print("If you're unsure how to use the application, give the argument -h (--help) for information")
-    elif sys.argv[1] in {"--help", "-h"}: # if the user gave one of these arguments on the command line then a help message is outputted
-        if argc == 2:
-            print()
-        else:
-            print("Argument \"-h\"/\"--help\" does not take any arguments")
-    elif sys.argv[1] in {"--validate", "-v"}:
-        if argc == 4 and sys.argv[2] == "FIGA":
-            solution = FIGASolution.is_valid(sys.argv[3])
-            print(
-                f"{solution.feasible=}{os.linesep}{os.linesep}"
-                f"{solution.total_distance=}{os.linesep}"
-                f"{solution.num_vehicles=}{os.linesep}{os.linesep}"
-                f"{str(solution)}"
-            )
-        else:
-            print("Inadequate amount of parameters; missing either the algorithm or the file name containing the solution to validate. Only FIGA is currently supported. Example command: \"main.py -v FIGA FIGASolution.csv\"")
-    else:
-        if sys.argv[1].upper() == "FIGA":
-            if argc == 3:
-                sys.argv.append("OMBUKI")
-            else:
-                exc = ValueError("FIGA should not be given a pre-determined acceptance criterion; it only has one")
-                raise exc
-
-        if len(sys.argv) < 4:
-            exc = ValueError("No acceptance criterion was given")
-            raise exc
-        elif sys.argv[3].upper() not in {"MMOEASA", "OMBUKI"}:
-            exc = ValueError(f"Acceptance criterion \"{sys.argv[3]}\" was not recognised")
-            raise exc
-        problem_instance = open_problem_instance(sys.argv[1].upper(), sys.argv[2], sys.argv[3].upper())
-
-        runs = int(sys.argv[4]) if len(sys.argv) == 5 else 1
-        for _ in range(runs):
-            nondominated_set, statistics = None, None
-            if sys.argv[1].upper() == "MMOEASA":
-                nondominated_set, statistics = execute_MMOEASA(problem_instance)
-            elif sys.argv[1].upper() == "OMBUKI-ORIGINAL":
-                nondominated_set, statistics = execute_Ombuki(problem_instance, True)
-            elif sys.argv[1].upper() == "OMBUKI":
-                nondominated_set, statistics = execute_Ombuki(problem_instance, False)
-            elif sys.argv[1].upper() == "FIGA":
-                nondominated_set, statistics = execute_FIGA(problem_instance)
-            else:
-                exc = ValueError(f"Algorithm \"{sys.argv[1]}\" was not recognised")
-                raise exc
-
-            # uncomment this code if you'd like a solution to be written to a CSV
-            # solutions can be plotted on a scatter graph in Excel as the x and y coordinates of each vehicle's destinations are outputted and in the order that they are serviced
-            # if nondominated_set:
-            #    write_solution_for_graph(nondominated_set[0])
-
-            for solution in nondominated_set:
-                print(f"{os.linesep + str(solution)}")
-            print(f"{os.linesep}Algorithm \"{sys.argv[1]}'s\" statistics:")
-            for statistic, value in statistics.items():
-                print(f" - {statistic}: {str(value)}")
-            print(f"{os.linesep + str(problem_instance)}")
-            calculate_area(problem_instance, nondominated_set, sys.argv[3])"""
 
 if __name__ == '__main__':
     parser = ArgumentParser(
