@@ -1,6 +1,7 @@
 import re
 import json
 from pathlib import Path
+from constants import INT_MAX
 from node import Node
 from problemInstance import ProblemInstance
 from MMOEASA.mmoeasaSolution import MMOEASASolution
@@ -24,7 +25,7 @@ def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: s
                             problem_instance.nodes[int(node.number)] = node
             if len(problem_instance.nodes) - 1 == 100 and (algorithm == "MMOEASA" or algorithm == "FIGA"):
                 with open("solomon_100/hypervolumes.json") as json_file:
-                    problem_instance.update_Hypervolumes(acceptance_criterion, *json.load(json_file)[acceptance_criterion][problem_instance.name])
+                    problem_instance.update_Hypervolumes(*json.load(json_file)[acceptance_criterion][problem_instance.name])
 
         problem_instance.calculate_distances()
         return problem_instance

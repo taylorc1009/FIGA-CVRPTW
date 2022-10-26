@@ -30,12 +30,12 @@ class ProblemInstance:
     def get_distance(self, from_node: int, to_node: int) -> float:
         return self.distances[len(self.nodes) * from_node + to_node]
 
-    def update_Hypervolumes(self, acceptance_criterion: str, *args: List[Union[float, int]]) -> None:
+    def update_Hypervolumes(self, *args: List[Union[float, int]]) -> None:
         self.Hypervolume_total_distance = float(args[0])
-        if acceptance_criterion == "MMOEASA":
+        if self.acceptance_criterion == "MMOEASA":
             self.Hypervolume_distance_unbalance = float(args[1])
             self.Hypervolume_cargo_unbalance = float(args[2])
             print(f"Hypervolumes modified: TD={self.Hypervolume_total_distance}, DU={self.Hypervolume_distance_unbalance}, CU={self.Hypervolume_cargo_unbalance}")
-        elif acceptance_criterion == "Ombuki":
+        elif self.acceptance_criterion == "Ombuki":
             self.Hypervolume_num_vehicles = int(args[1])
             print(f"Hypervolumes modified: TD={self.Hypervolume_total_distance}, NV={self.Hypervolume_num_vehicles}")
