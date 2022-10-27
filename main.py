@@ -3,14 +3,16 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from collections import deque
 from typing import List, Union, Tuple, Dict
 from MMOEASA.mmoeasaSolution import MMOEASASolution
+from Ombuki.auxiliaries import is_nondominated as ombuki_is_nondominated
 from Ombuki.ombukiSolution import OmbukiSolution
 from FIGA.figaSolution import FIGASolution
+from common import check_are_identical
 from problemInstance import ProblemInstance
 from data import open_problem_instance, write_solution_for_graph
 from MMOEASA.mmoeasa import MMOEASA
 from Ombuki.ombuki import Ombuki
-from evaluation import calculate_area
 from FIGA.figa import FIGA
+from evaluation import calculate_area
 
 def execute_MMOEASA(problem_instance: ProblemInstance) -> Tuple[List[Union[MMOEASASolution, OmbukiSolution]], Dict[str, int]]:
     from MMOEASA.parameters import POPULATION_SIZE, MULTI_STARTS, TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_SECONDS, TERMINATION_CONDITION_TYPE, NUM_PROGRESS_OUTPUTS, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP
@@ -89,7 +91,7 @@ if __name__ == '__main__':
         assert args.acceptance_criterion is not None
 
     problem_instance = open_problem_instance(args.algorithm, args.problem_instance, args.acceptance_criterion)
-    results = []
+    results, final_nondominated_set = [], []
 
     for run in range(args.runs):
         if args.runs > 1:
@@ -117,10 +119,39 @@ if __name__ == '__main__':
         for statistic, value in statistics.items():
             print(f" - {statistic}: {str(value)}")
         print(f"{os.linesep + str(problem_instance)}")"""
-        result = statistics["initialiser_execution_time"], statistics["feasible_initialisations"], calculate_area(problem_instance, nondominated_set, args.acceptance_criterion)
+        pareto_fronts = [(s.total_distance, s.num_vehicles) for s in nondominated_set]
+        result = statistics["feasible_initialisations"], calculate_area(problem_instance, nondominated_set, args.acceptance_criterion), str(pareto_fronts)
         results.append(result)
+
+        if args.runs > 1:
+            final_nondominated_set += nondominated_set
+
+            solutions_to_remove = set()
+            for s, solution in enumerate(final_nondominated_set[:-1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
+                if s not in solutions_to_remove:
+                    for s_aux, solution_auxiliary in enumerate(final_nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
+                        if s_aux not in solutions_to_remove:
+                            if ombuki_is_nondominated(solution, solution_auxiliary):
+                                solutions_to_remove.add(s)
+                                break
+                            elif ombuki_is_nondominated(solution_auxiliary, solution) \
+                                    or check_are_identical(solution, solution_auxiliary):
+                                solutions_to_remove.add(s_aux)
+
+            if solutions_to_remove:
+                i = 0
+                for s in range(len(final_nondominated_set)):
+                    if s not in solutions_to_remove:
+                        final_nondominated_set[i] = final_nondominated_set[s]
+                        i += 1
+                if i != len(nondominated_set):
+                    del final_nondominated_set[i:]
 
     if args.runs > 1:
         print(f"All runs completed. Results:")
         for result in results:
-            print(f" - {result[0]}, {result[1]}, {result[2]}%")
+            print(f" - {result[0]}, {result[1]}%, fronts = {result[2]}")
+
+        print(f"{os.linesep}Final non-dominated set:{os.linesep}Hypervolume: {calculate_area(problem_instance, final_nondominated_set, args.acceptance_criterion)}%{os.linesep}")
+        for solution in final_nondominated_set:
+            print(f"{str(solution)}{os.linesep}")
