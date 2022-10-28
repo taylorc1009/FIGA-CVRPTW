@@ -113,17 +113,21 @@ if __name__ == '__main__':
         # if nondominated_set:
         #    write_solution_for_graph(nondominated_set[0])
 
-        for solution in nondominated_set:
-            print(f"{os.linesep + str(solution)}")
         """print(f"{os.linesep}Algorithm \"{sys.argv[1]}'s\" statistics:")
         for statistic, value in statistics.items():
             print(f" - {statistic}: {str(value)}")
         print(f"{os.linesep + str(problem_instance)}")"""
-        pareto_fronts = [(s.total_distance, s.num_vehicles) for s in nondominated_set]
-        result = statistics["feasible_initialisations"], calculate_area(problem_instance, nondominated_set, args.acceptance_criterion), str(pareto_fronts)
-        results.append(result)
 
         if args.runs > 1:
+            pareto_fronts = ""
+            for solution in nondominated_set:
+                pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles},{os.linesep}"
+                solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
+                for vehicle in solution.vehicles:
+                    pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
+            result = statistics["feasible_initialisations"], calculate_area(problem_instance, nondominated_set, args.acceptance_criterion), pareto_fronts
+            results.append(result)
+
             final_nondominated_set += nondominated_set
 
             solutions_to_remove = set()
@@ -144,14 +148,19 @@ if __name__ == '__main__':
                     if s not in solutions_to_remove:
                         final_nondominated_set[i] = final_nondominated_set[s]
                         i += 1
-                if i != len(nondominated_set):
+                if i != len(final_nondominated_set):
                     del final_nondominated_set[i:]
+        else:
+            calculate_area(problem_instance, nondominated_set, args.acceptance_criterion)
+            for solution in nondominated_set:
+                print(f"{str(solution)}{os.linesep}")
 
     if args.runs > 1:
         print(f"All runs completed. Results:")
-        for result in results:
-            print(f" - {result[0]}, {result[1]}%, fronts = {result[2]}")
+        for i, result in enumerate(results, 1):
+            print(f"Run {i}: {result[0]}, {result[1]}%, fronts:{result[2]}")
 
-        print(f"{os.linesep}Final non-dominated set:{os.linesep}Hypervolume: {calculate_area(problem_instance, final_nondominated_set, args.acceptance_criterion)}%{os.linesep}")
+        print(f"Final non-dominated set:")
+        calculate_area(problem_instance, final_nondominated_set, args.acceptance_criterion)
         for solution in final_nondominated_set:
             print(f"{str(solution)}{os.linesep}")

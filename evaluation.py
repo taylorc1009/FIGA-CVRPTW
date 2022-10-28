@@ -16,5 +16,5 @@ def calculate_area(problem_instance: ProblemInstance, nondominated_set: List[Uni
 
         area = round(area, 2)
 
-    print(f"{os.linesep}Graph area occupied: {area}%")
+    print(f"{os.linesep}Graph area occupied: {area}%{os.linesep}")
     return area
