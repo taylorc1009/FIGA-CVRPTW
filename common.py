@@ -11,9 +11,10 @@ def rand(start: int, end: int, exclude_values: Set[int]=None) -> int:
     # '+ 1' to make the random number generator inclusive of the "end" value
     if start == end:
         return start
+    inclusion = + (1 if end < INT_MAX else 0)
     if not exclude_values:
-        return randint(start, end)
-    return choice(list(set(range(start, end + (1 if end < INT_MAX else 0))).difference(exclude_values if exclude_values else set())))
+        return randint(start, end + inclusion)
+    return choice(list(set(range(start, end + inclusion)).difference(exclude_values if exclude_values else set())))
 
 def check_are_identical(solution_one: Solution, solution_two: Solution) -> bool: # this is kept separate from "evaluate_similarity" below as not every function needs to know solutions' similarity rating, just whether they're identical or not
     return [d.node.number for v in sorted(solution_one.vehicles, key=lambda v: v.destinations[1].node.number) for d in v.get_customers_visited()] \
