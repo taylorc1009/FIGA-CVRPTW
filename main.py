@@ -158,7 +158,7 @@ if __name__ == '__main__':
                 solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
                 for vehicle in solution.vehicles:
                     pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
-                print(pareto_fronts)
+            print(pareto_fronts)
 
     if args.runs > 1:
         print(f"All runs completed. Results:")
