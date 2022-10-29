@@ -1,12 +1,12 @@
 import copy
 from math import exp, sqrt
+from operator import attrgetter
 from time import process_time
 from typing import Deque, List, Dict, Tuple, Union
 from constants import INT_MAX
 from common import rand, check_are_identical, check_iterations_termination_condition, check_seconds_termination_condition
-from random import shuffle, sample
+from random import choice, shuffle, sample
 from destination import Destination
-from node import Node
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
 from FIGA.operators import FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBR_mutation, TWBS_mutation, DBT_mutation, DBS_mutation, ES_crossover, VE_mutation
@@ -124,12 +124,15 @@ def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGAS
         i += 1
     solution.objective_function(instance)
 
-def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None) -> FIGASolution:
+def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None, is_min_vehicle_member: bool=False) -> FIGASolution:
     if exclude_solution:
         # if the non-dominated set isn't empty, and contains at least two solutions or one solution that is not "exclude_solution", then it is possible to use the non-dominated set
-        subject_list = nondominated_set if nondominated_set and (len(nondominated_set) > 2 or (len(nondominated_set) == 1 and nondominated_set[0] is not exclude_solution)) and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population
-        return random.choice(list(filter(lambda s: s is not exclude_solution, subject_list)))
-    return random.choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
+        if nondominated_set and (len(nondominated_set) > 2 or (len(nondominated_set) == 1 and nondominated_set[0] is not exclude_solution and not (is_min_vehicle_member and nondominated_set[0].num_vehicles == population[0].num_vehicles))) and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST:
+            subject_list = list(filter(lambda s: s.num_vehicles != population[0].num_vehicles, nondominated_set)) if is_min_vehicle_member else nondominated_set
+        else:
+            subject_list = population
+        return choice(list(filter(lambda s: s is not exclude_solution, subject_list)))
+    return choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
 
 def try_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < crossover_probability:
@@ -245,7 +248,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         d_pt_pt = d_df / temperature ** 2
         d_exp = exp(-1.0 * d_pt_pt)
 
-        if (random.randint(INT_MAX) / INT_MAX) < d_exp: # Metropolis acceptance criterion result is accepted based on probability
+        if random.randint(INT_MAX) / INT_MAX < d_exp: # Metropolis acceptance criterion result is accepted based on probability
             # metropolis_returns[3] += 1
             return child
         else:
@@ -275,13 +278,20 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
             for s in range(len(population)):
                 population[s].temperature = population[s].default_temperature
 
-        crossover_parent_two = selection_tournament(nondominated_set, population)
+        if nondominated_set:
+            nondominated_solution = copy.deepcopy(min(nondominated_set, key=attrgetter("num_vehicles")))
+            nondominated_solution.default_temperature = population[0].default_temperature
+            nondominated_solution.temperature = population[0].temperature
+            nondominated_solution.cooling_rate = population[0].cooling_rate
+            population[0] = nondominated_solution
 
         for s, solution in enumerate(population):
+            crossover_parent_two = selection_tournament(nondominated_set, population, exclude_solution=solution, is_min_vehicle_member=s == 0)
+
             if not solution.feasible:
                 attempt_time_window_based_reorder(instance, solution)
 
-            child, crossover = try_crossover(instance, solution, crossover_parent_two if solution is not crossover_parent_two else selection_tournament(nondominated_set, population, exclude_solution=solution), crossover_probability)
+            child, crossover = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
             if crossover:
                 check_nondominated_set_acceptance(nondominated_set, child)
                 # nds_update = check_nondominated_set_acceptance(nondominated_set, child)

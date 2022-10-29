@@ -121,7 +121,7 @@ if __name__ == '__main__':
         if args.runs > 1:
             pareto_fronts = ""
             for solution in nondominated_set:
-                pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles},{os.linesep}"
+                pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles}{os.linesep}"
                 solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
                 for vehicle in solution.vehicles:
                     pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
@@ -152,15 +152,26 @@ if __name__ == '__main__':
                     del final_nondominated_set[i:]
         else:
             calculate_area(problem_instance, nondominated_set, args.acceptance_criterion)
+            pareto_fronts = "Front(s):"
             for solution in nondominated_set:
-                print(f"{str(solution)}{os.linesep}")
+                pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles}{os.linesep}"
+                solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
+                for vehicle in solution.vehicles:
+                    pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
+                print(pareto_fronts)
 
     if args.runs > 1:
         print(f"All runs completed. Results:")
         for i, result in enumerate(results, 1):
             print(f"Run {i}: {result[0]}, {result[1]}%, fronts:{result[2]}")
 
-        print(f"Final non-dominated set:")
+        print(f"============================================={os.linesep * 2}Final non-dominated set:")
         calculate_area(problem_instance, final_nondominated_set, args.acceptance_criterion)
+
+        pareto_fronts = "Final front(s):"
         for solution in final_nondominated_set:
-            print(f"{str(solution)}{os.linesep}")
+            pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles}{os.linesep}"
+            solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
+            for vehicle in solution.vehicles:
+                pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
+        print(pareto_fronts)
