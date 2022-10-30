@@ -21,6 +21,3 @@ class Node:
     
     def __str__(self) -> str:
         return f"Node(number={self.number}, x={self.x}, y={self.y}, demand={self.demand}, ready_time={self.ready_time}, due_date={self.due_date}, service_duration={self.service_duration})"
-
-    def __deepcopy__(self, memodict: Dict=None) -> "Node":
-        return Node(number=self.number, x=self.x, y=self.y, demand=self.demand, ready_time=self.ready_time, due_date=self.due_date, service_duration=self.service_duration)
