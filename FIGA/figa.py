@@ -9,8 +9,8 @@ from random import choice, shuffle, sample
 from destination import Destination
 from problemInstance import ProblemInstance
 from FIGA.figaSolution import FIGASolution
-from FIGA.operators import FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBR_mutation, TWBS_mutation, DBT_mutation, DBS_mutation, ES_crossover, VE_mutation
-from FIGA.parameters import ES_CROSSOVER_MAX_VEHICLES, FBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
+from FIGA.operators import FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBR_mutation, TWBS_mutation, DBT_mutation, DBS_mutation, VE_mutation
+from FIGA.parameters import FBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
 from vehicle import Vehicle
 from numpy import ceil, random
 
@@ -140,16 +140,17 @@ def try_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_tw
         # crossover_invocations += 1
 
         crossover_solution = None
-        crossover = rand(1 if len(parent_one.vehicles) < instance.amount_of_vehicles else 2, 3)
+        crossover = rand(1, 2)
 
         match crossover:
             case 1:
-                crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min([ES_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1, instance.amount_of_vehicles - len(parent_one.vehicles)]))))
+                crossover_solution = FBR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(FBR_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
             case 2:
                 crossover_solution = SBCR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(SBRC_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
-            case _: # this crossover has a higher chance of occurring
-                crossover = 3
-                crossover_solution = FBR_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min(FBR_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1))))
+        """case 1:
+            crossover_solution = ES_crossover(instance, parent_one, sample(parent_two.vehicles, rand(1, min([ES_CROSSOVER_MAX_VEHICLES, len(parent_two.vehicles) - 1, instance.amount_of_vehicles - len(parent_one.vehicles)]))))
+        case 2:
+            crossover_solution = PM_crossover(instance, parent_one, parent_two)"""
 
         return crossover_solution, crossover
     return parent_one, None
@@ -163,33 +164,32 @@ def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_pro
         mutated_solution, result = copy.deepcopy(solution), None # make a copy solution as we don't want to mutate the original; the functions below are given the object by reference in Python
 
         while result is None:
-            mutator = rand(1 if solution.temperature > temperature_min else 3,9, exclude_values=failed_mutators)
+            mutator = rand(1, 7, exclude_values=failed_mutators)
 
             match mutator:
                 case 1:
-                    result = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
-                case 2:
-                    result = TWBR_mutation(instance, mutated_solution) # Time-Window-based Reorder Mutator
-                case 3:
                     result = PBS_mutator(instance, mutated_solution) # Partition-based Swap Mutator
-                case 4:
+                case 2:
                     result = DBT_mutation(instance, mutated_solution) # Distance-based Transfer Mutator
-                case 5:
+                case 3:
                     result = DBS_mutation(instance, mutated_solution) # Distance-based Swap Mutator
-                case 6:
+                case 4:
                     result = LDHR_mutation(instance, mutated_solution) # Low Distance High Ready-time Mutator
-                case 7:
+                case 5:
                     result = VE_mutation(instance, mutated_solution) # Vehicle Elimination Mutator
-                case 8:
+                case 6:
                     result = FBS_mutation(instance, mutated_solution) # Feasibility-based Swap Mutator
-                case 9:
+                case 7:
                     result = TWBLC_mutation(instance, mutated_solution) # Time-Window-based Local Crossover Mutator
-            """
+            """case 1:
+                result = TWBS_mutation(instance, mutated_solution) # Time-Window-based Swap Mutator
+            case 2:
+                result = TWBR_mutation(instance, mutated_solution) # Time-Window-based Reorder Mutator
             case 11:
                 mutated_solution = ATBR_mutation(instance, mutated_solution) # Arrival-Time Based Reorder Mutator"""
 
             if result is None:
-                if (solution.temperature > temperature_min and len(failed_mutators) == 8) or (solution.temperature <= temperature_min and len(failed_mutators) == 6):
+                if len(failed_mutators) == 6:
                     break
                 failed_mutators.add(mutator)
         return result, mutator
@@ -220,12 +220,12 @@ def calculate_cooling(i: int, temperature_max: float, temperature_min: float, te
 
     return cooling_rate
 
-def euclidean_distance_dispersion(instance: ProblemInstance, child: FIGASolution, parent: FIGASolution) -> float:
+def euclidean_distance_dispersion(child: FIGASolution, parent: FIGASolution) -> float:
     x1, y1 = child.total_distance, child.num_vehicles
     x2, y2 = parent.total_distance, parent.num_vehicles
-    return sqrt(((x2 - x1) / 2 * instance.Hypervolume_total_distance) ** 2 + ((y2 - y1) / 2 * instance.Hypervolume_num_vehicles) ** 2)
+    return sqrt(((x2 - x1) / 2 * parent.total_distance * .9) ** 2 + ((y2 - y1) / 2 * (parent.num_vehicles - 1)) ** 2)
 
-def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASolution, temperature: float, population: List[FIGASolution]=None) -> FIGASolution:
+def mo_metropolis(parent: FIGASolution, child: FIGASolution, temperature: float, population: List[FIGASolution]=None) -> FIGASolution:
     # global metropolis_returns
     if not population:
         population = []
@@ -242,7 +242,7 @@ def mo_metropolis(instance: ProblemInstance, parent: FIGASolution, child: FIGASo
         # the Metropolis function accepts a solution based on this deterioration when neither the parent nor child dominate
         # the reason the deterioration needs to be simulated is that it cannot be calculated in a multi objective case; in a single-objective case, the deterioration would simply be "solution one's objective - solution two's objective"
         # if the deterioration is low, there is a better chance that the Metropolis function will accept the child solution
-        d_df = euclidean_distance_dispersion(instance, child, parent)
+        d_df = euclidean_distance_dispersion(child, parent)
         # deterioration per-temperature-per-temperature simply incorporates the parent's Simulated Annealing temperature into the acceptance probability of MO_Metropolis
         # the new calculation in the "else" clause reduces the probability of accepting duplicate solutions from being recorded at a low temperature, and vice versa for high temperatures
         d_pt_pt = d_df / temperature ** 2
@@ -275,8 +275,72 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     last_nds_update = None
     while not terminate:
         if population[0].temperature <= temperature_stop:
-            for s in range(len(population)):
+            for s in range(population_size):
                 population[s].temperature = population[s].default_temperature
+
+            """if nondominated_set:
+                new_generation = []
+                nondominated_solution = copy.deepcopy(min(nondominated_set, key=attrgetter("num_vehicles")))
+                nondominated_solution.default_temperature = population[0].default_temperature
+                nondominated_solution.temperature = population[0].temperature * population[0].cooling_rate
+                nondominated_solution.cooling_rate = population[0].cooling_rate
+                new_generation.append(nondominated_solution)
+
+                for s in range(1, population_size):
+                    crossover_parent_two = choice(population)
+                    solution = copy.deepcopy(choice(nondominated_set))
+                    solution.default_temperature = population[s].default_temperature
+                    solution.temperature = population[s].temperature
+                    solution.cooling_rate = population[s].cooling_rate
+
+                    if not crossover_parent_two.feasible and s == 1: # in this case, we may have selected an infeasible solution from the population, so try to correct it first
+                        attempt_time_window_based_reorder(instance, crossover_parent_two)
+
+                    child, crossover = try_crossover(instance, solution, crossover_parent_two, crossover_probability)
+                    if crossover:
+                        # check_nondominated_set_acceptance(nondominated_set, child)
+                        nds_update = check_nondominated_set_acceptance(nondominated_set, child)
+                        if nds_update:
+                            last_nds_update = nds_update - start
+                            nds_str = ""
+                            for s_aux, solution in enumerate(nondominated_set):
+                                nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s_aux < len(nondominated_set) - 1 else "")
+                            print(nds_str)
+                    # mutations = []
+                    for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
+                        mutated_child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), 100, temperature_min)
+                        if mutated_child is not None:
+                            child = mutated_child
+                        else:
+                            break
+                        if mutator:
+                            # check_nondominated_set_acceptance(nondominated_set, child)
+                            nds_update = check_nondominated_set_acceptance(nondominated_set, child)
+                            if nds_update:
+                                last_nds_update = nds_update - start
+                                nds_str = ""
+                                for s_aux, solution in enumerate(nondominated_set):
+                                    nds_str += f"{solution.total_distance},{solution.num_vehicles}" + (" ||| " if s_aux < len(nondominated_set) - 1 else "")
+                                print(nds_str)
+                        # mutations.append(mutator)
+
+                    #if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, population=new_generation) is not solution:
+                    new_generation.append(child)
+                        # if crossover:
+                        #     if not crossover in crossover_acceptances:
+                        #         crossover_acceptances[crossover] = 1
+                        #     else:
+                        #         crossover_acceptances[crossover] += 1
+                        # if mutations:
+                        #     for mutator in filter(lambda m: m, mutations):
+                        #         if not mutator in mutation_acceptances:
+                        #             mutation_acceptances[mutator] = 1
+                        #         else:
+                        #             mutation_acceptances[mutator] += 1
+
+                    new_generation[s].temperature *= new_generation[s].cooling_rate
+                population = new_generation
+                continue"""
 
         if nondominated_set:
             nondominated_solution = copy.deepcopy(min(nondominated_set, key=attrgetter("num_vehicles")))
@@ -303,7 +367,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                 #     print(nds_str)
             # mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                mutated_child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), mutation_probability, temperature_min)
+                mutated_child, mutator = try_mutation(instance, mo_metropolis(solution, child, solution.temperature), mutation_probability, temperature_min)
                 if mutated_child is not None:
                     child = mutated_child
                 else:
@@ -319,7 +383,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                     #     print(nds_str)
                 # mutations.append(mutator)
 
-            if not solution.feasible or mo_metropolis(instance, solution, child, solution.temperature, population=population) is not solution:
+            if not solution.feasible or mo_metropolis(solution, child, solution.temperature, population=population) is not solution:
                 population[s] = child
                 # if crossover:
                 #     if not crossover in crossover_acceptances:

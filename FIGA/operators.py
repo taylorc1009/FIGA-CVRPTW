@@ -5,6 +5,7 @@ from FIGA.parameters import MUTATION_MAX_SLICE_LENGTH, MUTATION_SHORT_ROUTE_POOL
 from FIGA.figaSolution import FIGASolution
 from constants import INT_MAX
 from common import rand
+from destination import Destination
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
 from numpy import subtract
@@ -98,6 +99,46 @@ def SBCR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_t
         crossover_solution.vehicles[best_vehicle].calculate_destinations_time_windows(instance, start_from=best_position)
         crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)
 
+    """for parent_destination in randomized_destinations:
+        best_vehicle, best_position = (None,) * 2
+        shortest_total_distance = float(INT_MAX)
+        highest_wait_time = 0.0
+        found_feasible_location = False
+
+        for i, vehicle in enumerate(crossover_solution.vehicles):
+            if vehicle.current_capacity + parent_destination.node.demand <= instance.capacity_of_vehicles:
+                for j in range(1, len(crossover_solution.vehicles[i].destinations)):
+                    vehicle.destinations.insert(j, Destination(node=parent_destination.node))
+                    
+                    if vehicle.calculate_destinations_time_windows(instance, start_from=j):
+                        vehicle.calculate_length_of_route(instance)
+                        total_distance = sum(v.route_distance for v in crossover_solution.vehicles)
+                        if total_distance < shortest_total_distance:
+                            best_vehicle, best_position, shortest_total_distance = i, j, total_distance
+                            found_feasible_location = True
+                    elif not found_feasible_location:
+                        if crossover_solution.vehicles[i].destinations[j].wait_time > highest_wait_time:
+                            best_vehicle, best_position, highest_wait_time = i, j - 1, crossover_solution.vehicles[i].destinations[j].wait_time
+
+                    vehicle.destinations.pop(j)
+                    vehicle.calculate_destinations_time_windows(instance, start_from=j)
+
+        if not found_feasible_location and len(crossover_solution.vehicles) < instance.amount_of_vehicles and best_vehicle is None:
+            best_vehicle, best_position = len(crossover_solution.vehicles), 1
+            crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination)) # we don't need to give "Vehicle.create_route" a deep copy of the destination as it constructs an new Destination instance
+        else:
+            # best_vehicle and best_position will equal the insertion position before the vehicle with the longest wait time
+            # that is if no feasible insertion point was found, otherwise it will equal the fittest feasible insertion point
+            try:
+                crossover_solution.vehicles[best_vehicle].destinations.insert(best_position, copy.deepcopy(parent_destination))
+            except:
+                print("ERROR", found_feasible_location, len(crossover_solution.vehicles), best_vehicle)
+                exit()
+
+        crossover_solution.vehicles[best_vehicle].current_capacity += parent_destination.node.demand
+        crossover_solution.vehicles[best_vehicle].calculate_destinations_time_windows(instance, start_from=best_position)
+        crossover_solution.vehicles[best_vehicle].calculate_length_of_route(instance)"""
+
     crossover_solution.objective_function(instance)
     return crossover_solution
 
@@ -151,14 +192,14 @@ def FBR_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_tw
     crossover_solution.objective_function(instance)
     return crossover_solution
 
-def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Eliminate and Substitute Crossover
+"""def ES_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution: # Eliminate and Substitute Crossover
     crossover_solution = set_up_crossover_child(instance, parent_one, parent_two_vehicles)
 
     crossover_solution.vehicles += [copy.deepcopy(vehicle) for vehicle in parent_two_vehicles]
 
     crossover_solution.calculate_length_of_routes(instance)
     crossover_solution.objective_function(instance)
-    return crossover_solution
+    return crossover_solution"""
 
 def select_random_vehicle(solution: FIGASolution, customers_required: int=2, exclude_values: Set[int]=None) -> int:
     if exclude_values is None:
@@ -170,6 +211,39 @@ def select_random_vehicle(solution: FIGASolution, customers_required: int=2, exc
             exclude_values.add(random_vehicle)
             random_vehicle = -1
     return random_vehicle
+
+"""def PMX_reinsertion(instance: ProblemInstance, crossover_solution: FIGASolution, node_number: int, nodes_being_replaced: List[int]) -> int:
+    for vehicle in crossover_solution.vehicles:
+        for destination in vehicle.get_customers_visited():
+            if destination.node.number == node_number:
+                destination.node = instance.nodes[nodes_being_replaced.pop(0)]
+                return
+
+def PM_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution) -> FIGASolution: # Partially Mapped Crossover
+    crossover_solution = copy.deepcopy(parent_one)
+    previous_destination_vehicle = None # prevents the same vehicle from being crossover twice, in order to avoid reverting the previous mapping
+
+    map_length = rand(2, 5)
+    origin_vehicle = parent_two.vehicles[select_random_vehicle(parent_two, customers_required=map_length)]
+    previous_destination_vehicle = destination_vehicle_index = select_random_vehicle(crossover_solution, customers_required=(map_length if origin_vehicle.get_num_of_customers_visited() > map_length else map_length + 1), exclude_values=previous_destination_vehicle)
+    destination_vehicle = crossover_solution.vehicles[destination_vehicle_index]
+    cut_start = rand(1, min(destination_vehicle.get_num_of_customers_visited(), origin_vehicle.get_num_of_customers_visited()) - (map_length - 1))
+
+    nodes_being_replaced, nodes_being_inserted = [d.node.number for d in destination_vehicle.destinations[cut_start : cut_start + map_length]], [d.node.number for d in origin_vehicle.destinations[cut_start : cut_start + map_length]]
+
+    destination_vehicle.destinations[cut_start : cut_start + map_length] = [copy.deepcopy(destination) for destination in origin_vehicle.destinations[cut_start : cut_start + map_length]]
+    for node_number in nodes_being_inserted:
+        if node_number not in nodes_being_replaced:
+            PMX_reinsertion(instance, crossover_solution, node_number, nodes_being_replaced)
+        else:
+            nodes_being_replaced.remove(node_number)
+
+    crossover_solution.calculate_length_of_routes(instance)
+    crossover_solution.calculate_vehicles_loads()
+    crossover_solution.calculate_routes_time_windows(instance)
+    crossover_solution.objective_function(instance)
+
+    return crossover_solution"""
 
 def select_route_with_longest_wait(solution: FIGASolution) -> int:
     longest_waiting_vehicle = -1
