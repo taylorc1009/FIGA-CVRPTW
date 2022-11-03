@@ -1,6 +1,10 @@
 import re
 import json
+import pandas as pd
+import os.path
+from operator import attrgetter
 from pathlib import Path
+from typing import List
 from constants import INT_MAX
 from node import Node
 from problemInstance import ProblemInstance
@@ -58,3 +62,27 @@ def write_solution_for_graph(solution: Solution) -> None:
                 else:
                     csv.write(",,")
             csv.write('\n')
+
+def store_results(problem_instance: str, algorithm: str, all_hypervolumes: List[float], all_nondominated_sets: List[List[Solution]], final_hypervolume: float, final_nondominated_set: List[Solution]) -> None:
+    relative_path = str(Path(__file__).parent.resolve())
+    problem_name = re.split("[\/\.]+", problem_instance)[1]
+
+    summary_csv_path = relative_path + "\\summary.csv"
+    run_id = len(pd.read_csv(summary_csv_path, header=None)) if os.path.isfile(summary_csv_path) else 0
+
+    with open(relative_path + "\\summary.csv", "a+") as csv:
+        v_low, v_high = min(final_nondominated_set, key=attrgetter("num_vehicles")).num_vehicles, max(final_nondominated_set, key=attrgetter("num_vehicles")).num_vehicles
+        d_low, d_high = min(final_nondominated_set, key=attrgetter("total_distance")).total_distance, max(final_nondominated_set, key=attrgetter("total_distance")).total_distance
+        csv.write(f"{run_id},{problem_name},{algorithm},{final_hypervolume},{len(final_nondominated_set)},{d_low},{d_high},{v_low},{v_high}\n")
+
+    with open(relative_path + "\\fronts.csv", "a+") as csv:
+        for solution in final_nondominated_set:
+            csv.write(f"{run_id},{problem_name},{algorithm},{solution.total_distance},{solution.num_vehicles}\n")
+
+    with open(relative_path + f"\\{algorithm}-{problem_name}.csv", "a+") as csv:
+        for i, nondominated_set in enumerate(all_nondominated_sets):
+            line = f"{run_id}.{i},{all_hypervolumes[i]},"
+            for j, solution in enumerate(nondominated_set, 1):
+                solution_str = str([str([d.node.number for d in v.get_customers_visited()]).replace(", ", " ") for v in solution.vehicles]).replace(", ", "").replace("'", "")
+                line += solution_str + (',' if j < len(nondominated_set) else '\n')
+            csv.write(line)
