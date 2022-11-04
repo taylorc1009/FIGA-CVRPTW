@@ -1,12 +1,12 @@
-from argparse import ArgumentParser, RawTextHelpFormatter
 import copy
-from math import sqrt
 import os
-from pathlib import Path
 import re
 import sys
-from typing import Dict, List, Tuple, Union
 from abc import ABC, abstractclassmethod, abstractmethod
+from argparse import ArgumentParser, RawTextHelpFormatter
+from math import sqrt
+from pathlib import Path
+from typing import Dict, List, Tuple, Union
 
 INFINITY = 7654321
 INT_MAX = 2147483647

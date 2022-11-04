@@ -1,6 +1,6 @@
+from common import rand
 from FIGA.figaSolution import FIGASolution
 from FIGA.operators import select_random_vehicle, swap
-from common import rand
 from problemInstance import ProblemInstance
 
 

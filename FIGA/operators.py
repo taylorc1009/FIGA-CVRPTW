@@ -1,14 +1,23 @@
 import copy
-from random import shuffle, choice, getrandbits
+from random import choice, getrandbits, shuffle
 from typing import List, Set
-from FIGA.parameters import MUTATION_MAX_SLICE_LENGTH, MUTATION_SHORT_ROUTE_POOL_SIZE, MUTATION_LONGEST_WAIT_PROBABILITY, MUTATION_LONGEST_ROUTE_PROBABILITY, MUTATION_MAX_FBS_SWAPS, MUTATION_MAX_LDHR_SWAPS, MUTATION_REVERSE_SWAP_PROBABILITY, MUTATION_ELIMINATE_SHORTEST_PROBABILITY
-from FIGA.figaSolution import FIGASolution
-from constants import INT_MAX
+
+from numpy import subtract
+
 from common import rand
+from constants import INT_MAX
 from destination import Destination
+from FIGA.figaSolution import FIGASolution
+from FIGA.parameters import (MUTATION_ELIMINATE_SHORTEST_PROBABILITY,
+                             MUTATION_LONGEST_ROUTE_PROBABILITY,
+                             MUTATION_LONGEST_WAIT_PROBABILITY,
+                             MUTATION_MAX_FBS_SWAPS, MUTATION_MAX_LDHR_SWAPS,
+                             MUTATION_MAX_SLICE_LENGTH,
+                             MUTATION_REVERSE_SWAP_PROBABILITY,
+                             MUTATION_SHORT_ROUTE_POOL_SIZE)
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
-from numpy import subtract
+
 
 def set_up_crossover_child(instance: ProblemInstance, parent_one: FIGASolution, parent_two_vehicles: List[Vehicle]) -> FIGASolution:
     child_solution = copy.deepcopy(parent_one)

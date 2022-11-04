@@ -1,10 +1,12 @@
 import copy
-from typing import List, Dict
-from MMOEASA.constants import INFINITY
+from typing import Dict, List
+
 from constants import INT_MAX
-from vehicle import Vehicle
+from MMOEASA.constants import INFINITY
 from problemInstance import ProblemInstance
 from solution import Solution
+from vehicle import Vehicle
+
 
 class MMOEASASolution(Solution):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0, total_distance: float=0.0, distance_unbalance: float=0.0, cargo_unbalance: float=0.0, rank: int=INT_MAX) -> None:

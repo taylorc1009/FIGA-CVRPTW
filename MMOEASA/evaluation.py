@@ -1,6 +1,8 @@
-from problemInstance import ProblemInstance
+from typing import List, Tuple
+
 from MMOEASA.mmoeasaSolution import MMOEASASolution
-from typing import Tuple, List
+from problemInstance import ProblemInstance
+
 
 def ref_point(instance: ProblemInstance) -> Tuple[float, float, int]:
     return 10000.0, 2000.0, instance.capacity_of_vehicles + 1

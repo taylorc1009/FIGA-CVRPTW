@@ -1,14 +1,16 @@
-from concurrent.futures import ProcessPoolExecutor
 import copy
+from concurrent.futures import ProcessPoolExecutor
 from random import choice, shuffle
 from typing import Tuple, Union
-from Ombuki.constants import MUTATION_REVERSAL_LENGTH
-from Ombuki.ombukiSolution import OmbukiSolution
-from MMOEASA.mmoeasaSolution import MMOEASASolution
-from problemInstance import ProblemInstance
-from vehicle import Vehicle
+
 from common import rand
 from constants import INT_MAX
+from MMOEASA.mmoeasaSolution import MMOEASASolution
+from Ombuki.constants import MUTATION_REVERSAL_LENGTH
+from Ombuki.ombukiSolution import OmbukiSolution
+from problemInstance import ProblemInstance
+from vehicle import Vehicle
+
 
 def set_up_crossover_child(instance: ProblemInstance, crossover_solution: Union[OmbukiSolution, MMOEASASolution], parent_two_vehicle: Vehicle) -> OmbukiSolution:
     # check commentary of "set_up_crossover_child" in "../FIGA/operators.py"

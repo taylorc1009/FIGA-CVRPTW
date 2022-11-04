@@ -1,31 +1,48 @@
 import os
 from argparse import ArgumentParser, RawTextHelpFormatter
 from collections import deque
-import sys
-from typing import List, Union, Tuple, Dict
+from typing import Dict, List, Tuple, Union
+
+from common import check_are_identical
+from data import open_problem_instance, store_results, write_solution_for_graph
+from evaluation import calculate_area
+from FIGA.figa import FIGA
+from FIGA.figaSolution import FIGASolution
+from MMOEASA.auxiliaries import is_nondominated as mmoeasa_is_nondominated
+from MMOEASA.mmoeasa import MMOEASA
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 from Ombuki.auxiliaries import is_nondominated as ombuki_is_nondominated
-from MMOEASA.auxiliaries import is_nondominated as mmoeasa_is_nondominated
-from Ombuki.ombukiSolution import OmbukiSolution
-from FIGA.figaSolution import FIGASolution
-from common import check_are_identical
-from problemInstance import ProblemInstance
-from data import open_problem_instance, store_results, write_solution_for_graph
-from MMOEASA.mmoeasa import MMOEASA
 from Ombuki.ombuki import Ombuki
-from FIGA.figa import FIGA
-from evaluation import calculate_area
+from Ombuki.ombukiSolution import OmbukiSolution
+from problemInstance import ProblemInstance
+
 
 def execute_MMOEASA(problem_instance: ProblemInstance) -> Tuple[List[Union[MMOEASASolution, OmbukiSolution]], Dict[str, int]]:
-    from MMOEASA.parameters import POPULATION_SIZE, MULTI_STARTS, TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_SECONDS, TERMINATION_CONDITION_TYPE, NUM_PROGRESS_OUTPUTS, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP
+    from MMOEASA.parameters import (CROSSOVER_PROBABILITY, MULTI_STARTS,
+                                    MUTATION_PROBABILITY, NUM_PROGRESS_OUTPUTS,
+                                    POPULATION_SIZE, TEMPERATURE_MAX,
+                                    TEMPERATURE_MIN, TEMPERATURE_STOP,
+                                    TERMINATION_CONDITION_ITERATIONS,
+                                    TERMINATION_CONDITION_SECONDS,
+                                    TERMINATION_CONDITION_TYPE)
     return MMOEASA(problem_instance, POPULATION_SIZE, MULTI_STARTS, TERMINATION_CONDITION_SECONDS if TERMINATION_CONDITION_TYPE == "seconds" else TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_TYPE, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP, deque([(TERMINATION_CONDITION_SECONDS / 10) * step if TERMINATION_CONDITION_TYPE == "seconds" else (TERMINATION_CONDITION_ITERATIONS / 10) * step for step in range(NUM_PROGRESS_OUTPUTS)]))
 
 def execute_Ombuki(problem_instance: ProblemInstance, use_original: bool) -> Tuple[List[Union[OmbukiSolution, MMOEASASolution]], Dict[str, int]]:
-    from Ombuki.parameters import POPULATION_SIZE, TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_SECONDS, TERMINATION_CONDITION_TYPE, NUM_PROGRESS_OUTPUTS, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY
+    from Ombuki.parameters import (CROSSOVER_PROBABILITY, MUTATION_PROBABILITY,
+                                   NUM_PROGRESS_OUTPUTS, POPULATION_SIZE,
+                                   TERMINATION_CONDITION_ITERATIONS,
+                                   TERMINATION_CONDITION_SECONDS,
+                                   TERMINATION_CONDITION_TYPE)
     return Ombuki(problem_instance, POPULATION_SIZE, TERMINATION_CONDITION_SECONDS if TERMINATION_CONDITION_TYPE == "seconds" else TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_TYPE, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, use_original, deque([(TERMINATION_CONDITION_SECONDS / 10) * step if TERMINATION_CONDITION_TYPE == "seconds" else (TERMINATION_CONDITION_ITERATIONS / 10) * step for step in range(NUM_PROGRESS_OUTPUTS)]))
 
 def execute_FIGA(problem_instance: ProblemInstance) -> Tuple[List[FIGASolution], Dict[str, int]]:
-    from FIGA.parameters import POPULATION_SIZE, TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_SECONDS, TERMINATION_CONDITION_TYPE, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP, NUM_PROGRESS_OUTPUTS, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY
+    from FIGA.parameters import (CROSSOVER_PROBABILITY, MUTATION_PROBABILITY,
+                                 NUM_PROGRESS_OUTPUTS, POPULATION_SIZE,
+                                 TEMPERATURE_MAX, TEMPERATURE_MIN,
+                                 TEMPERATURE_STOP,
+                                 TERMINATION_CONDITION_ITERATIONS,
+                                 TERMINATION_CONDITION_SECONDS,
+                                 TERMINATION_CONDITION_TYPE)
     return FIGA(problem_instance, POPULATION_SIZE, TERMINATION_CONDITION_SECONDS if TERMINATION_CONDITION_TYPE == "seconds" else TERMINATION_CONDITION_ITERATIONS, TERMINATION_CONDITION_TYPE, CROSSOVER_PROBABILITY, MUTATION_PROBABILITY, TEMPERATURE_MAX, TEMPERATURE_MIN, TEMPERATURE_STOP, deque([(TERMINATION_CONDITION_SECONDS / 10) * step if TERMINATION_CONDITION_TYPE == "seconds" else (TERMINATION_CONDITION_ITERATIONS / 10) * step for step in range(NUM_PROGRESS_OUTPUTS)]))
 
 if __name__ == '__main__':

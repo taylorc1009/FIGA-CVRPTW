@@ -1,13 +1,15 @@
 import copy
 import os
 import sys
-from typing import List, Dict
+from pathlib import Path
+from typing import Dict, List
+
 from data import open_problem_instance
-from vehicle import Vehicle
+from MMOEASA.constants import INFINITY
 from problemInstance import ProblemInstance
 from solution import Solution
-from pathlib import Path
-from MMOEASA.constants import INFINITY
+from vehicle import Vehicle
+
 
 class FIGASolution(Solution):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, num_vehicles: int=0, temperature: float=0.0, default_temperature: float=0.0, cooling_rate: float=0.0) -> None:

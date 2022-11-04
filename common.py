@@ -1,11 +1,14 @@
+from difflib import SequenceMatcher
 from multiprocessing import Process
 from random import choice
-from numpy.random import randint
 from time import process_time
 from typing import Deque, List, Set, Tuple
+
+from numpy.random import randint
+
 from constants import INT_MAX
 from solution import Solution
-from difflib import SequenceMatcher
+
 
 def rand(start: int, end: int, exclude_values: Set[int]=None) -> int:
     # '+ 1' to make the random number generator inclusive of the "end" value

@@ -1,8 +1,10 @@
 import copy
+from typing import Dict, List, Union
+
 from destination import Destination
-from typing import List, Dict, Union
-from problemInstance import ProblemInstance
 from node import Node
+from problemInstance import ProblemInstance
+
 
 class Vehicle:
     def __init__(self, current_capacity: int=0, destinations: List[Destination]=None, route_distance: float=0.0) -> None:

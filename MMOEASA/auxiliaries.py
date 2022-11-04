@@ -1,11 +1,13 @@
-from typing import List, Union, Callable
+from typing import Callable, List, Union
+
 from common import check_are_identical
 from constants import INT_MAX
+from destination import Destination
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 from Ombuki.ombukiSolution import OmbukiSolution
 from problemInstance import ProblemInstance
 from vehicle import Vehicle
-from destination import Destination
+
 
 def is_nondominated(parent: MMOEASASolution, child: MMOEASASolution) -> bool:
     return (child.total_distance < parent.total_distance and child.cargo_unbalance <= parent.cargo_unbalance) or (child.total_distance <= parent.total_distance and child.cargo_unbalance < parent.cargo_unbalance)

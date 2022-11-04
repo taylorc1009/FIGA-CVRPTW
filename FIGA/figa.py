@@ -1,18 +1,28 @@
 import copy
 from math import exp, sqrt
 from operator import attrgetter
+from random import choice, sample, shuffle
 from time import process_time
-from typing import Deque, List, Dict, Tuple, Union
-from constants import INT_MAX
-from common import rand, check_are_identical, check_iterations_termination_condition, check_seconds_termination_condition
-from random import choice, shuffle, sample
-from destination import Destination
-from problemInstance import ProblemInstance
-from FIGA.figaSolution import FIGASolution
-from FIGA.operators import FBS_mutation, LDHR_mutation, FBR_crossover, PBS_mutator, TWBLC_mutation, SBCR_crossover, TWBR_mutation, TWBS_mutation, DBT_mutation, DBS_mutation, VE_mutation
-from FIGA.parameters import FBR_CROSSOVER_MAX_VEHICLES, SBRC_CROSSOVER_MAX_VEHICLES, TOURNAMENT_PROBABILITY_SELECT_BEST, MAX_SIMULTANEOUS_MUTATIONS
-from vehicle import Vehicle
+from typing import Deque, Dict, List, Tuple, Union
+
 from numpy import ceil, random
+
+from common import (check_are_identical,
+                    check_iterations_termination_condition,
+                    check_seconds_termination_condition, rand)
+from constants import INT_MAX
+from destination import Destination
+from FIGA.figaSolution import FIGASolution
+from FIGA.operators import (DBS_mutation, DBT_mutation, FBR_crossover,
+                            FBS_mutation, LDHR_mutation, PBS_mutator,
+                            SBCR_crossover, TWBLC_mutation, TWBR_mutation,
+                            TWBS_mutation, VE_mutation)
+from FIGA.parameters import (FBR_CROSSOVER_MAX_VEHICLES,
+                             MAX_SIMULTANEOUS_MUTATIONS,
+                             SBRC_CROSSOVER_MAX_VEHICLES,
+                             TOURNAMENT_PROBABILITY_SELECT_BEST)
+from problemInstance import ProblemInstance
+from vehicle import Vehicle
 
 # operators' statistics
 initialiser_execution_time: float=0.0

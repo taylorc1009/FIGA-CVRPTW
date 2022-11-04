@@ -1,15 +1,18 @@
-import re
 import json
-import pandas as pd
 import os.path
+import re
 import sys
 from operator import attrgetter
 from pathlib import Path
 from typing import List
+
+import pandas as pd
+
+from MMOEASA.mmoeasaSolution import MMOEASASolution
 from node import Node
 from problemInstance import ProblemInstance
-from MMOEASA.mmoeasaSolution import MMOEASASolution
 from solution import Solution
+
 
 def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: str) -> ProblemInstance:
     try:

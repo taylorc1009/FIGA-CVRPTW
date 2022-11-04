@@ -1,6 +1,8 @@
+from typing import List, Tuple
+
 from Ombuki.ombukiSolution import OmbukiSolution
 from problemInstance import ProblemInstance
-from typing import Tuple, List
+
 
 def ref_point(instance: ProblemInstance) -> Tuple[float, int]:
     return 10000.0, instance.amount_of_vehicles + 1

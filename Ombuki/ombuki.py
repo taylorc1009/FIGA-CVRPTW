@@ -1,18 +1,25 @@
 import copy
-from time import process_time
-from typing import Deque, List, Union, Dict, Tuple
-from Ombuki.operators import crossover, mutation
-from MMOEASA.mmoeasaSolution import MMOEASASolution
-from problemInstance import ProblemInstance
-from Ombuki.ombukiSolution import OmbukiSolution
-from vehicle import Vehicle
-from destination import Destination
-from Ombuki.auxiliaries import get_nondominated_set, get_unique_set, is_nondominated, mmoeasa_is_nondominated
-from numpy import round
 from random import choice, sample, shuffle
-from Ombuki.constants import TOURNAMENT_SET_SIZE, TOURNAMENT_PROBABILITY_SELECT_BEST, GREEDY_PERCENT
+from time import process_time
+from typing import Deque, Dict, List, Tuple, Union
+
+from numpy import round
+
+from common import (check_are_identical,
+                    check_iterations_termination_condition,
+                    check_seconds_termination_condition, rand)
 from constants import INT_MAX
-from common import check_are_identical, rand, check_iterations_termination_condition, check_seconds_termination_condition
+from destination import Destination
+from MMOEASA.mmoeasaSolution import MMOEASASolution
+from Ombuki.auxiliaries import (get_nondominated_set, get_unique_set,
+                                is_nondominated, mmoeasa_is_nondominated)
+from Ombuki.constants import (GREEDY_PERCENT,
+                              TOURNAMENT_PROBABILITY_SELECT_BEST,
+                              TOURNAMENT_SET_SIZE)
+from Ombuki.ombukiSolution import OmbukiSolution
+from Ombuki.operators import crossover, mutation
+from problemInstance import ProblemInstance
+from vehicle import Vehicle
 
 initialiser_execution_time: int=0
 feasible_initialisations: int=0

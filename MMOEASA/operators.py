@@ -1,12 +1,14 @@
 import copy
+from typing import List, Set, Tuple, Union
+
+from common import rand
+from MMOEASA.auxiliaries import insert_unvisited_node
 from MMOEASA.constants import INFINITY
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 from Ombuki.ombukiSolution import OmbukiSolution
-from MMOEASA.auxiliaries import insert_unvisited_node
-from common import rand
 from problemInstance import ProblemInstance
-from typing import List, Tuple, Set, Union
 from vehicle import Vehicle
+
 
 def move_destination(instance: ProblemInstance, solution: Union[MMOEASASolution, OmbukiSolution], vehicle_1: int, origin: int, vehicle_2: int, destination: int) -> Union[MMOEASASolution, OmbukiSolution]:
     # moves destinations from one position in one route to another position in another route, then calculates the statistics of both routes after this change

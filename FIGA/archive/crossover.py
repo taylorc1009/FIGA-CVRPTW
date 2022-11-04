@@ -1,17 +1,18 @@
 import copy
-from random import sample, shuffle
 import time
-from threading import Lock
 from multiprocessing import Process
+from random import sample, shuffle
+from threading import Lock, Thread, currentThread
 from typing import Dict, List, Set, Tuple
-from FIGA.figaSolution import FIGASolution
-from destination import Destination
-from problemInstance import ProblemInstance
-from constants import INT_MAX
+
 from common import rand
-from threading import Thread, currentThread
+from constants import INT_MAX
+from destination import Destination
+from FIGA.figaSolution import FIGASolution
+from problemInstance import ProblemInstance
 #from FIGA.figa import is_nondominated # if you move the double BCRC from this archive, this import will cause a circular import
 from vehicle import Vehicle
+
 
 class CrossoverPositionStats:
     def __init__(self) -> None:

@@ -1,8 +1,10 @@
-from typing import List
-from vehicle import Vehicle
-from problemInstance import ProblemInstance
-from constants import INT_MAX
 from abc import ABC, abstractclassmethod, abstractmethod
+from typing import List
+
+from constants import INT_MAX
+from problemInstance import ProblemInstance
+from vehicle import Vehicle
+
 
 class Solution(ABC):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, total_distance: float=0.0, rank: int=INT_MAX, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0) -> None:

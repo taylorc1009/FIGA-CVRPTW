@@ -1,10 +1,12 @@
 import copy
-from typing import List, Dict
+from typing import Dict, List
+
 from constants import INT_MAX
 from MMOEASA.constants import INFINITY
-from vehicle import Vehicle
 from problemInstance import ProblemInstance
 from solution import Solution
+from vehicle import Vehicle
+
 
 class OmbukiSolution(Solution):
     def __init__(self, _id: int=None, vehicles: List[Vehicle]=None, feasible: bool=True, default_temperature: float=0.0, temperature: float=0.0, cooling_rate: float=0.0, total_distance: float=0.0, num_vehicles: int=0, rank: int=INT_MAX) -> None:

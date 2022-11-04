@@ -1,5 +1,7 @@
 from typing import Dict, List, Union
+
 from node import Node
+
 
 class ProblemInstance:
     distances: List[float]=None

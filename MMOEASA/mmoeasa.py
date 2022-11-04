@@ -1,19 +1,25 @@
 import copy
+from itertools import islice
 from random import choice
 from time import process_time
-from itertools import islice
-from MMOEASA.auxiliaries import is_nondominated, ombuki_is_nondominated, check_nondominated_set_acceptance
-from MMOEASA.operators import mutation1, mutation2, mutation3, mutation4, mutation5, mutation6, mutation7, mutation8, mutation9, mutation10, crossover1
+from typing import Callable, Deque, Dict, List, Tuple, Union
+
+from numpy import exp, random, sqrt
+
+from common import (check_iterations_termination_condition,
+                    check_seconds_termination_condition, rand)
+from constants import INT_MAX
+from destination import Destination
+from MMOEASA.auxiliaries import (check_nondominated_set_acceptance,
+                                 is_nondominated, ombuki_is_nondominated)
 from MMOEASA.constants import MAX_SIMULTANEOUS_MUTATIONS
 from MMOEASA.mmoeasaSolution import MMOEASASolution
+from MMOEASA.operators import (crossover1, mutation1, mutation2, mutation3,
+                               mutation4, mutation5, mutation6, mutation7,
+                               mutation8, mutation9, mutation10)
 from Ombuki.ombukiSolution import OmbukiSolution
 from problemInstance import ProblemInstance
-from destination import Destination
 from vehicle import Vehicle
-from constants import INT_MAX
-from common import rand, check_iterations_termination_condition, check_seconds_termination_condition
-from typing import Callable, Deque, List, Tuple, Union, Dict
-from numpy import sqrt, exp, random
 
 initialiser_execution_time: int=0
 feasible_initialisations: int=0

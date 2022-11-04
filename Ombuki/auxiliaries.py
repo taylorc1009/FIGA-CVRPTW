@@ -1,7 +1,9 @@
-from typing import List, Union, Callable
+from typing import Callable, List, Union
+
+from common import check_are_identical
 from MMOEASA.mmoeasaSolution import MMOEASASolution
 from Ombuki.ombukiSolution import OmbukiSolution
-from common import check_are_identical
+
 
 def is_nondominated(old_solution: OmbukiSolution, new_solution: OmbukiSolution) -> bool:
     return (new_solution.total_distance < old_solution.total_distance and new_solution.num_vehicles <= old_solution.num_vehicles) or (new_solution.total_distance <= old_solution.total_distance and new_solution.num_vehicles < old_solution.num_vehicles)
