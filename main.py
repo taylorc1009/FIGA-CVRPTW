@@ -55,9 +55,10 @@ if __name__ == '__main__':
             f" - \"main.py Ombuki solomon_100/R201.txt -ac MMOEASA\""
     )
 
-    parser.add_argument("algorithm",
+    parser.add_argument("-a", "--algorithm",
         type=str,
         choices=["FIGA", "MMOEASA", "Ombuki", "Ombuki-Original"],
+        dest="algorithm",
         help=f"The algorithms available are:{os.linesep}"
             f" - MMOEASA,{os.linesep}"
             f" - Ombuki,{os.linesep}"
@@ -65,8 +66,9 @@ if __name__ == '__main__':
             f" - FIGA.{os.linesep}{os.linesep}"
     )
 
-    parser.add_argument("problem_instance",
+    parser.add_argument("-pi", "--problem_instance",
         type=str,
+        dest="problem_instance",
         help=f"There's multiple types of problems in Solomon's instances. Here's what they are:{os.linesep}"
             f" - Number of customers:{os.linesep}"
             f"   - 100 - 100 customers,{os.linesep}"
@@ -88,6 +90,7 @@ if __name__ == '__main__':
     parser.add_argument("-ac", "--acceptance_criterion",
         type=str,
         choices=["MMOEASA", "Ombuki"],
+        dest="acceptance_criterion",
         help=f"The acceptance criteria available are:{os.linesep}"
             f" - MMOEASA,{os.linesep}"
             f" - Ombuki.{os.linesep}{os.linesep}"
@@ -101,73 +104,101 @@ if __name__ == '__main__':
         help="Number of runs you wish your given configuration to complete. Giving a value > 1 will cause your selected algorithm to run multiple times on your selected problem instance and acceptance criteria."
     )
 
+    parser.add_argument("-v", "--validate",
+        type=str,
+        dest="validate",
+        help="CSV file containing the solution you wish to validate. Validation is used to prove a file; whether it is feasible or not."
+    )
+
     args = parser.parse_args()
 
-    if args.algorithm == "FIGA":
-        assert args.acceptance_criterion is None
-        args.acceptance_criterion = "Ombuki"
+    if args.validate:
+        assert args.algorithm is not None
+        if args.algorithm != "FIGA":
+            exc = ValueError(f"Validation for algorithm {args.algorithm} has not been implemented yet. Currently, only validation for FIGA is available.")
+
+        # match args.algorithm:
+        #     case "FIGA":
+        solution = FIGASolution.is_valid(args.validate)
+        print(
+            f"feasibility: {solution.feasible}{os.linesep}"
+            f"front: {solution.total_distance}, {solution.num_vehicles}{os.linesep}{os.linesep}"
+            "Vehicles:"
+        )
+        for i, vehicle in enumerate(solution.vehicles):
+            print(f" - {i}: {vehicle.current_capacity}, {vehicle.route_distance}, {vehicle.get_num_of_customers_visited()}")
+        # case "Ombuki":
+        #     OmbukiSolution.is_valid()
+        # case "MMOEASA":
+        #     MMOEASASolution.is_valid()
     else:
-        assert args.acceptance_criterion is not None
+        assert args.algorithm is not None and args.problem_instance is not None
 
-    problem_instance = open_problem_instance(args.algorithm, args.problem_instance, args.acceptance_criterion)
-    all_nondominated_sets, all_hypervolumes = [], []
-
-    for run in range(args.runs):
-        if args.runs > 1:
-            print(f"Started run {run + 1} of {args.runs}")
-
-        nondominated_set, statistics = None, None
-        match args.algorithm:
-            case "MMOEASA":
-                nondominated_set, statistics = execute_MMOEASA(problem_instance)
-            case "Ombuki-Original":
-                nondominated_set, statistics = execute_Ombuki(problem_instance, True)
-            case "Ombuki":
-                nondominated_set, statistics = execute_Ombuki(problem_instance, False)
-            case "FIGA":
-                nondominated_set, statistics = execute_FIGA(problem_instance)
-
-        # uncomment this code if you'd like a solution to be written to a CSV
-        # solutions can be plotted on a scatter graph in Excel as the x and y coordinates of each vehicle's destinations are outputted and in the order that they are serviced
-        # if nondominated_set:
-        #    write_solution_for_graph(nondominated_set[0])
-
-        if args.runs > 1:
-            all_nondominated_sets.append(nondominated_set)
-            all_hypervolumes.append(calculate_area(problem_instance, nondominated_set, args.acceptance_criterion))
+        if args.algorithm == "FIGA":
+            assert args.acceptance_criterion is None
+            args.acceptance_criterion = "Ombuki"
         else:
-            calculate_area(problem_instance, nondominated_set, args.acceptance_criterion)
-            pareto_fronts = "Front(s):"
-            for solution in nondominated_set:
-                pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles}{os.linesep}"
-                solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
-                for vehicle in solution.vehicles:
-                    pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
-            print(pareto_fronts)
+            assert args.acceptance_criterion is not None
 
-    if args.runs > 1:
-        is_nondominated = ombuki_is_nondominated if args.acceptance_criterion == "Ombuki" else mmoeasa_is_nondominated
+        problem_instance = open_problem_instance(args.algorithm, args.problem_instance, args.acceptance_criterion)
+        all_nondominated_sets, all_hypervolumes = [], []
 
-        final_nondominated_set = [solution for nondominated_set in all_nondominated_sets for solution in nondominated_set]
-        solutions_to_remove = set()
-        for s, solution in enumerate(final_nondominated_set[:-1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
-            if s not in solutions_to_remove:
-                for s_aux, solution_auxiliary in enumerate(final_nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
-                    if s_aux not in solutions_to_remove:
-                        if is_nondominated(solution, solution_auxiliary):
-                            solutions_to_remove.add(s)
-                            break
-                        elif is_nondominated(solution_auxiliary, solution) \
-                                or check_are_identical(solution, solution_auxiliary):
-                            solutions_to_remove.add(s_aux)
+        for run in range(args.runs):
+            if args.runs > 1:
+                print(f"Started run {run + 1} of {args.runs}")
 
-        if solutions_to_remove:
-            i = 0
-            for s in range(len(final_nondominated_set)):
+            nondominated_set, statistics = None, None
+            match args.algorithm:
+                case "MMOEASA":
+                    nondominated_set, statistics = execute_MMOEASA(problem_instance)
+                case "Ombuki-Original":
+                    nondominated_set, statistics = execute_Ombuki(problem_instance, True)
+                case "Ombuki":
+                    nondominated_set, statistics = execute_Ombuki(problem_instance, False)
+                case "FIGA":
+                    nondominated_set, statistics = execute_FIGA(problem_instance)
+
+            # uncomment this code if you'd like a solution to be written to a CSV
+            # solutions can be plotted on a scatter graph in Excel as the x and y coordinates of each vehicle's destinations are outputted and in the order that they are serviced
+            # if nondominated_set:
+            #    write_solution_for_graph(nondominated_set[0])
+
+            if args.runs > 1:
+                all_nondominated_sets.append(nondominated_set)
+                all_hypervolumes.append(calculate_area(problem_instance, nondominated_set, args.acceptance_criterion))
+            else:
+                calculate_area(problem_instance, nondominated_set, args.acceptance_criterion)
+                pareto_fronts = "Front(s):"
+                for solution in nondominated_set:
+                    pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles}{os.linesep}"
+                    solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
+                    for vehicle in solution.vehicles:
+                        pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
+                print(pareto_fronts)
+
+        if args.runs > 1:
+            is_nondominated = ombuki_is_nondominated if args.acceptance_criterion == "Ombuki" else mmoeasa_is_nondominated
+
+            final_nondominated_set = [solution for nondominated_set in all_nondominated_sets for solution in nondominated_set]
+            solutions_to_remove = set()
+            for s, solution in enumerate(final_nondominated_set[:-1]): # len - 1 because in the next loop, s + 1 will do the comparison of the last non-dominated solution; we never need s and s_aux to equal the same value as there's no point comparing identical solutions
                 if s not in solutions_to_remove:
-                    final_nondominated_set[i] = final_nondominated_set[s]
-                    i += 1
-            if i != len(final_nondominated_set):
-                del final_nondominated_set[i:]
+                    for s_aux, solution_auxiliary in enumerate(final_nondominated_set[s + 1:], s + 1): # s + 1 to len will perform the comparisons that have not been carried out yet; any solutions between indexes 0 and s + 1 have already been compared to the solution at index s, and + 1 is so that solution s is not compared to s
+                        if s_aux not in solutions_to_remove:
+                            if is_nondominated(solution, solution_auxiliary):
+                                solutions_to_remove.add(s)
+                                break
+                            elif is_nondominated(solution_auxiliary, solution) \
+                                    or check_are_identical(solution, solution_auxiliary):
+                                solutions_to_remove.add(s_aux)
 
-        store_results(args.problem_instance, args.algorithm, all_hypervolumes, all_nondominated_sets, calculate_area(problem_instance, final_nondominated_set, args.acceptance_criterion), final_nondominated_set)
+            if solutions_to_remove:
+                i = 0
+                for s in range(len(final_nondominated_set)):
+                    if s not in solutions_to_remove:
+                        final_nondominated_set[i] = final_nondominated_set[s]
+                        i += 1
+                if i != len(final_nondominated_set):
+                    del final_nondominated_set[i:]
+
+            store_results(args.problem_instance, args.algorithm, all_hypervolumes, all_nondominated_sets, calculate_area(problem_instance, final_nondominated_set, args.acceptance_criterion), final_nondominated_set)

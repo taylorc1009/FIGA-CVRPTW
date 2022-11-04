@@ -48,7 +48,7 @@ class FIGASolution(Solution):
         return FIGASolution(_id=self.id, vehicles=[copy.deepcopy(v) for v in self.vehicles], feasible=self.feasible, total_distance=self.total_distance, num_vehicles=self.num_vehicles, temperature=self.temperature, default_temperature=self.default_temperature, cooling_rate=self.cooling_rate)
 
     @classmethod
-    def is_valid(cls, filename: str) -> "FIGASolution":
+    def is_valid(cls, filename: str) -> "FIGASolution": # this can only exist in the Solution subclasses, not Solution, because Solution cannot have an objective_function()
         relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else f"{str(Path(__file__).parent.resolve())}\\{filename}"
         solution = cls(_id=0)
 
