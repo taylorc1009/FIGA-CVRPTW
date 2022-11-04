@@ -1,6 +1,6 @@
 from typing import Final
 
-POPULATION_SIZE: Final[int]=20
+POPULATION_SIZE: Final[int]=40
 MULTI_STARTS: Final[int]=10
 TERMINATION_CONDITION_ITERATIONS: Final[int]=200 # if you use "iterations" as the termination condition, then the number of iterations that will be performed will be equal to TERMINATION_CONDITION_ITERATIONS * MULTI_STARTS
 TERMINATION_CONDITION_SECONDS: Final[int]=600
