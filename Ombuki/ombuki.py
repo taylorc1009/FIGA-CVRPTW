@@ -177,6 +177,10 @@ def modified_feasible_network_transformation(instance: ProblemInstance, solution
                         for infeasible_vehicle in sorted_with_index:
                             if infeasible_vehicle.current_capacity + destination.node.demand < instance.capacity_of_vehicles:
                                 infeasible_vehicle.destinations.insert(infeasible_vehicle.get_num_of_customers_visited() + 1, copy.deepcopy(destination))
+                                infeasible_vehicle.current_capacity += destination.node.demand
+                                infeasible_vehicle.calculate_destination_time_window(instance, -3, -2)
+                                infeasible_vehicle.calculate_destination_time_window(instance, -2, -1)
+                                v = first_attempted_vehicle
                                 break
                         break
                     else:
@@ -185,14 +189,10 @@ def modified_feasible_network_transformation(instance: ProblemInstance, solution
                 else:
                     if len(transformed_solution.vehicles) < instance.amount_of_vehicles:
                         transformed_solution.vehicles.append(Vehicle.create_route(instance, destination.node))
+                        transformed_solution.vehicles[-1].calculate_destinations_time_windows(instance)
+                        transformed_solution.vehicles[-1].current_capacity += destination.node.demand
                         feasible_insertion = True
                     v += 1
-
-            if not feasible_insertion:
-                v = first_attempted_vehicle
-                transformed_solution.vehicles[v].current_capacity += destination.node.demand
-                transformed_solution.vehicles[v].calculate_destination_time_window(instance, -3, -2)
-                transformed_solution.vehicles[v].calculate_destination_time_window(instance, -2, -1)
 
     transformed_solution.calculate_length_of_routes(instance)
     transformed_solution.objective_function(instance)

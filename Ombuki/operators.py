@@ -49,7 +49,7 @@ def original_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution
     shuffle(randomized_destinations)
     for d in randomized_destinations:
         parent_destination = parent_vehicle.destinations[d]
-        best_vehicle, best_position = -1, 0
+        best_vehicle, best_position = instance.amount_of_vehicles, 0
         shortest_distance = float(INT_MAX)
         found_feasible_location = False
 
@@ -90,7 +90,7 @@ def modified_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution
     shuffle(randomized_destinations)
     for d in randomized_destinations:
         parent_destination = parent_vehicle.destinations[d]
-        best_vehicle, best_position = -1, 0
+        best_vehicle, best_position = instance.amount_of_vehicles, 0
         shortest_distance = float(INT_MAX)
         found_feasible_location = False
 
@@ -113,10 +113,11 @@ def modified_crossover(instance: ProblemInstance, solution: Union[OmbukiSolution
                 best_vehicle = len(crossover_solution.vehicles)
                 crossover_solution.vehicles.append(Vehicle.create_route(instance, parent_destination.node))
             else:
-                sorted_by_nearest = sorted(crossover_solution.vehicles, key=lambda veh: instance.get_distance(veh.destinations[-2].node.number, parent_destination.node.number))
-                for infeasible_vehicle in sorted_by_nearest:
+                sorted_by_nearest = sorted(enumerate(crossover_solution.vehicles), key=lambda veh: instance.get_distance(veh[1].destinations[-2].node.number, parent_destination.node.number))
+                for v, infeasible_vehicle in sorted_by_nearest:
                     if infeasible_vehicle.current_capacity + parent_destination.node.demand <= instance.capacity_of_vehicles:
                         infeasible_vehicle.destinations.insert(infeasible_vehicle.get_num_of_customers_visited() + 1, copy.deepcopy(parent_destination))
+                        best_vehicle, best_position = v, infeasible_vehicle.get_num_of_customers_visited()
                         break
         else:
             crossover_solution.vehicles[best_vehicle].destinations.insert(best_position, copy.deepcopy(parent_destination))
