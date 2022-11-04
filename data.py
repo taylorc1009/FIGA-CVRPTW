@@ -8,7 +8,6 @@ from typing import List
 
 import pandas as pd
 
-from MMOEASA.mmoeasaSolution import MMOEASASolution
 from node import Node
 from problemInstance import ProblemInstance
 from solution import Solution
@@ -40,7 +39,7 @@ def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: s
         exc = FileNotFoundError(f"Couldn't open file \"{filename}\"\nCause: {e}")
         raise exc from None
 
-def MMOEASA_write_solution_for_validation(solution: MMOEASASolution, max_capacity: int) -> None:
+def MMOEASA_write_solution_for_validation(solution: Solution, max_capacity: int) -> None:
     relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else str(Path(__file__).parent.resolve()) + "\\MMOEASA\\validator\\solution.csv"
 
     with open(relative_path, "w+") as csv:

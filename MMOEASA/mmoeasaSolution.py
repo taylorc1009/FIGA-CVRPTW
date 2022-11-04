@@ -1,7 +1,11 @@
 import copy
+import os
+import sys
+from pathlib import Path
 from typing import Dict, List
 
 from constants import INT_MAX
+from data import open_problem_instance
 from MMOEASA.constants import INFINITY
 from problemInstance import ProblemInstance
 from solution import Solution
@@ -58,5 +62,25 @@ class MMOEASASolution(Solution):
     def __deepcopy__(self, memodict: Dict=None) -> "MMOEASASolution":
         return MMOEASASolution(_id=self.id, vehicles=[copy.deepcopy(v) for v in self.vehicles], feasible=self.feasible, default_temperature=self.default_temperature, temperature=self.temperature, cooling_rate=self.cooling_rate, total_distance=self.total_distance, distance_unbalance=self.distance_unbalance, cargo_unbalance=self.cargo_unbalance, rank=self.rank)
 
-    def is_valid(self, filename: str):
-        ...
+    @classmethod
+    def is_valid(cls, filename: str): # this can only exist in the Solution subclasses, not Solution, because Solution cannot have an objective_function()
+        relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else f"{str(Path(__file__).parent.resolve())}\\{filename}"
+        solution = cls(_id=0)
+
+        try:
+            with open(relative_path, 'r') as file:
+                problem_path = file.readline().strip() # because the problem name is the first line in the text files, this line quickly adds it to a variable (so we can add it to a "ProblemInstance" object later"
+                instance = open_problem_instance("MMOEASA", problem_path, "MMOEASA")
+                for line in file:
+                    cur_line = line.split()[0]
+                    solution.vehicles.append(Vehicle.create_route(instance, [instance.nodes[int(n)] for n in cur_line.split(',')]))
+        except FileNotFoundError as e:
+            exc = FileNotFoundError(f"Couldn't open file \"{filename}\"\nCause: {e}")
+            raise exc from None
+
+        solution.calculate_length_of_routes(instance)
+        solution.calculate_vehicles_loads()
+        solution.calculate_routes_time_windows(instance)
+        solution.objective_function(instance)
+
+        return solution

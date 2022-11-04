@@ -107,7 +107,7 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--validate",
         type=str,
         dest="validate",
-        help="CSV file containing the solution you wish to validate. Validation is used to prove a file; whether it is feasible or not."
+        help="Follow up with a CSV file containing the solution you wish to validate. Validation is used to prove a solution; whether it is feasible or not."
     )
 
     args = parser.parse_args()
@@ -117,20 +117,34 @@ if __name__ == '__main__':
         if args.algorithm != "FIGA":
             exc = ValueError(f"Validation for algorithm {args.algorithm} has not been implemented yet. Currently, only validation for FIGA is available.")
 
-        # match args.algorithm:
-        #     case "FIGA":
-        solution = FIGASolution.is_valid(args.validate)
-        print(
-            f"feasibility: {solution.feasible}{os.linesep}"
-            f"front: {solution.total_distance}, {solution.num_vehicles}{os.linesep}{os.linesep}"
-            "Vehicles:"
-        )
-        for i, vehicle in enumerate(solution.vehicles):
-            print(f" - {i}: {vehicle.current_capacity}, {vehicle.route_distance}, {vehicle.get_num_of_customers_visited()}")
-        # case "Ombuki":
-        #     OmbukiSolution.is_valid()
-        # case "MMOEASA":
-        #     MMOEASASolution.is_valid()
+        match args.algorithm:
+            case "FIGA":
+                solution = FIGASolution.is_valid(args.validate)
+                print(
+                    f"feasibility: {solution.feasible}{os.linesep}"
+                    f"front: {solution.total_distance}, {solution.num_vehicles}{os.linesep}{os.linesep}"
+                    "Vehicles:"
+                )
+                for i, vehicle in enumerate(solution.vehicles):
+                    print(f" - {i}: {vehicle.current_capacity}, {vehicle.route_distance}, {vehicle.get_num_of_customers_visited()}")
+            case "Ombuki":
+                solution = OmbukiSolution.is_valid(args.validate)
+                print(
+                    f"feasibility: {solution.feasible}{os.linesep}"
+                    f"front: {solution.total_distance}, {solution.num_vehicles}{os.linesep}{os.linesep}"
+                    "Vehicles:"
+                )
+                for i, vehicle in enumerate(solution.vehicles):
+                    print(f" - {i}: {vehicle.current_capacity}, {vehicle.route_distance}, {vehicle.get_num_of_customers_visited()}")
+            case "MMOEASA":
+                solution = MMOEASASolution.is_valid(args.validate)
+                print(
+                    f"feasibility: {solution.feasible}{os.linesep}"
+                    f"front: {solution.total_distance}, {solution.distance_unbalance}, {solution.cargo_unbalance}{os.linesep}{os.linesep}"
+                    "Vehicles:"
+                )
+                for i, vehicle in enumerate(solution.vehicles):
+                    print(f" - {i}: {vehicle.current_capacity}, {vehicle.route_distance}, {vehicle.get_num_of_customers_visited()}")
     else:
         assert args.algorithm is not None and args.problem_instance is not None
 
