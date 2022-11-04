@@ -2,10 +2,10 @@ import re
 import json
 import pandas as pd
 import os.path
+import sys
 from operator import attrgetter
 from pathlib import Path
 from typing import List
-from constants import INT_MAX
 from node import Node
 from problemInstance import ProblemInstance
 from MMOEASA.mmoeasaSolution import MMOEASASolution
@@ -38,7 +38,7 @@ def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: s
         raise exc from None
 
 def MMOEASA_write_solution_for_validation(solution: MMOEASASolution, max_capacity: int) -> None:
-    relative_path = str(Path(__file__).parent.resolve()) + "\\MMOEASA\\validator\\solution.csv"
+    relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else str(Path(__file__).parent.resolve()) + "\\MMOEASA\\validator\\solution.csv"
 
     with open(relative_path, "w+") as csv:
         csv.write(f"{max_capacity}\n")
@@ -51,7 +51,7 @@ def MMOEASA_write_solution_for_validation(solution: MMOEASASolution, max_capacit
                 csv.write(f"{node.number},{node.x},{node.y},{node.demand},{node.ready_time},{node.due_date},{node.service_duration}\n")
 
 def write_solution_for_graph(solution: Solution) -> None:
-    relative_path = str(Path(__file__).parent.resolve()) + "\\graph_solution.csv"
+    relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else str(Path(__file__).parent.resolve()) + "\\graph_solution.csv"
 
     with open(relative_path, "w+") as csv:
         max_len = max([len(v.destinations) for v in solution.vehicles])
@@ -64,13 +64,13 @@ def write_solution_for_graph(solution: Solution) -> None:
             csv.write('\n')
 
 def store_results(problem_instance: str, algorithm: str, all_hypervolumes: List[float], all_nondominated_sets: List[List[Solution]], final_hypervolume: float, final_nondominated_set: List[Solution]) -> None:
-    relative_path = str(Path(__file__).parent.resolve())
+    relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else str(Path(__file__).parent.resolve())
     problem_name = re.split("[\/\.]+", problem_instance)[1]
 
     summary_csv_path = relative_path + "\\summary.csv"
     run_id = len(pd.read_csv(summary_csv_path, header=None)) if os.path.isfile(summary_csv_path) else 0
 
-    with open(relative_path + "\\summary.csv", "a+") as csv:
+    with open(summary_csv_path, "a+") as csv:
         v_low, v_high = min(final_nondominated_set, key=attrgetter("num_vehicles")).num_vehicles, max(final_nondominated_set, key=attrgetter("num_vehicles")).num_vehicles
         d_low, d_high = min(final_nondominated_set, key=attrgetter("total_distance")).total_distance, max(final_nondominated_set, key=attrgetter("total_distance")).total_distance
         csv.write(f"{run_id},{problem_name},{algorithm},{final_hypervolume},{len(final_nondominated_set)},{d_low},{d_high},{v_low},{v_high}\n")

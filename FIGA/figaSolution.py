@@ -1,4 +1,6 @@
 import copy
+import os
+import sys
 from typing import List, Dict
 from data import open_problem_instance
 from vehicle import Vehicle
@@ -45,7 +47,7 @@ class FIGASolution(Solution):
 
     @classmethod
     def is_valid(cls, filename: str) -> "FIGASolution":
-        relative_path = f"{str(Path(__file__).parent.resolve())}\\{filename}"
+        relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else f"{str(Path(__file__).parent.resolve())}\\{filename}"
         solution = cls(_id=0)
 
         try:

@@ -4,6 +4,7 @@ from math import sqrt
 import os
 from pathlib import Path
 import re
+import sys
 from typing import Dict, List, Tuple, Union
 from abc import ABC, abstractclassmethod, abstractmethod
 
@@ -219,7 +220,7 @@ class FIGASolution(Solution):
 
     @classmethod
     def is_valid(cls, filename: str) -> "FIGASolution":
-        relative_path = f"{str(Path(__file__).parent.resolve())}\\{filename}"
+        relative_path =  os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else f"{str(Path(__file__).parent.resolve())}\\{filename}"
         solution = cls(_id=0)
 
         try:
@@ -263,7 +264,7 @@ def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: s
         raise exc from None
 
 def open_results(filename: str) -> Tuple[List["FIGASolution"], List[float], List["FIGASolution"], float]:
-    relative_path = f"{str(Path(__file__).parent.resolve())}\\{filename}"
+    relative_path =  os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else f"{str(Path(__file__).parent.resolve())}\\{filename}"
     solutions, areas, final_nondominated_set, final_nondominated_set_area = [], [], [], 0.0
     subject_list = solutions
 
