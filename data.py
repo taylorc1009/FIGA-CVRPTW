@@ -85,6 +85,13 @@ def store_results(problem_instance: str, algorithm: str, all_hypervolumes: List[
         for i, nondominated_set in enumerate(all_nondominated_sets):
             line = f"{run_id}.{i},{all_hypervolumes[i]},"
             for j, solution in enumerate(nondominated_set, 1):
-                solution_str = str([str([d.node.number for d in v.get_customers_visited()]).replace(", ", " ") for v in solution.vehicles]).replace(", ", "").replace("'", "")
-                line += solution_str + (',' if j < len(nondominated_set) else '\n')
+                solution_str = None
+                if hasattr(solution, "num_vehicles"):
+                    solution_str = f"{solution.total_distance} {solution.num_vehicles}"
+                elif hasattr(solution, "distance_unbalance") and hasattr(solution, "cargo_unbalance"):
+                    solution_str = f"{solution.total_distance} {solution.distance_unbalance} {solution.cargo_unbalance}"
+                line += solution_str + str([str([d.node.number for d in v.get_customers_visited()]).replace(", ", " ") for v in solution.vehicles]).replace(", ", "").replace("'", "")
+                if j < len(nondominated_set):
+                    line += ','
+            line += '\n'
             csv.write(line)
