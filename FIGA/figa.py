@@ -165,7 +165,7 @@ def try_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_tw
         return crossover_solution, crossover
     return parent_one, None
 
-def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int, temperature_min: float) -> Tuple[FIGASolution, Union[int, None]]:
+def try_mutation(instance: ProblemInstance, solution: FIGASolution, mutation_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
     if rand(1, 100) < mutation_probability:
         # global mutation_invocations
         # mutation_invocations += 1
@@ -244,9 +244,9 @@ def mo_metropolis(parent: FIGASolution, child: FIGASolution, temperature: float,
     if is_nondominated(parent, child) and not duplicate:
         # metropolis_returns[1] += 1
         return child
-    elif temperature < 0.0001:
-        # metropolis_returns[2] += 1
-        return parent
+    # elif is_nondominated(child, parent):
+    #     # metropolis_returns[2] += 1
+    #     return parent
     else:
         # d_df is a simulated deterioration (difference between the new and old solution) between the multi-objective variables
         # the Metropolis function accepts a solution based on this deterioration when neither the parent nor child dominate
@@ -261,9 +261,8 @@ def mo_metropolis(parent: FIGASolution, child: FIGASolution, temperature: float,
         if random.randint(INT_MAX) / INT_MAX < d_exp: # Metropolis acceptance criterion result is accepted based on probability
             # metropolis_returns[3] += 1
             return child
-        else:
-            # metropolis_returns[4] += 1
-            return parent
+        # metropolis_returns[4] += 1
+        return parent
 
 def FIGA(instance: ProblemInstance, population_size: int, termination_condition: int, termination_type: str, crossover_probability: int, mutation_probability: int, temperature_max: float, temperature_min: float, temperature_stop: float, progress_indication_steps: Deque[float]) -> Tuple[List[FIGASolution], Dict[str, int]]:
     population: List[FIGASolution] = list()
@@ -274,7 +273,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
     start = process_time()
     for i in range(0, population_size):
         population.insert(i, DTWIH_III(instance, i))
-        population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
+        population[i].temperature = population[i].default_temperature = temperature_max - float(i) * ((temperature_max - temperature_min) / float(population_size - 1))
         population[i].cooling_rate = calculate_cooling(i, temperature_max, temperature_min, temperature_stop, population_size, termination_condition)
         if population[i].feasible:
             feasible_initialisations += 1
@@ -318,7 +317,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                             print(nds_str)
                     # mutations = []
                     for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                        mutated_child, mutator = try_mutation(instance, mo_metropolis(instance, solution, child, solution.temperature), 100, temperature_min)
+                        mutated_child, mutator = try_mutation(instance, mo_metropolis(solution, child, solution.temperature), 100)
                         if mutated_child is not None:
                             child = mutated_child
                         else:
@@ -377,7 +376,7 @@ def FIGA(instance: ProblemInstance, population_size: int, termination_condition:
                 #     print(nds_str)
             # mutations = []
             for _ in range(rand(1, MAX_SIMULTANEOUS_MUTATIONS)):
-                mutated_child, mutator = try_mutation(instance, mo_metropolis(solution, child, solution.temperature), mutation_probability, temperature_min)
+                mutated_child, mutator = try_mutation(instance, mo_metropolis(solution, child, solution.temperature), mutation_probability)
                 if mutated_child is not None:
                     child = mutated_child
                 else:
