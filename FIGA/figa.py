@@ -137,11 +137,14 @@ def attempt_time_window_based_reorder(instance: ProblemInstance, solution: FIGAS
 def selection_tournament(nondominated_set: List[FIGASolution], population: List[FIGASolution], exclude_solution: FIGASolution=None, is_min_vehicle_member: bool=False) -> FIGASolution:
     if exclude_solution:
         # if the non-dominated set isn't empty, and contains at least two solutions or one solution that is not "exclude_solution", then it is possible to use the non-dominated set
-        if nondominated_set and (len(nondominated_set) > 2 or (len(nondominated_set) == 1 and nondominated_set[0] is not exclude_solution and not (is_min_vehicle_member and nondominated_set[0].num_vehicles == population[0].num_vehicles))) and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST:
-            subject_list = list(filter(lambda s: s.num_vehicles != population[0].num_vehicles, nondominated_set)) if is_min_vehicle_member else nondominated_set
-        else:
-            subject_list = population
-        return choice(list(filter(lambda s: s is not exclude_solution, subject_list)))
+        if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST:
+            if is_min_vehicle_member:
+                subject_list = list(filter(lambda s: s is not exclude_solution and s.num_vehicles != population[0].num_vehicles, nondominated_set))
+            else:
+                subject_list = list(filter(lambda s: s is not exclude_solution, nondominated_set))
+            if subject_list:
+                return choice(subject_list)
+        return choice(list(filter(lambda s: s is not exclude_solution, population)))
     return choice(nondominated_set if nondominated_set and rand(1, 100) < TOURNAMENT_PROBABILITY_SELECT_BEST else population)
 
 def try_crossover(instance: ProblemInstance, parent_one: FIGASolution, parent_two: FIGASolution, crossover_probability: int) -> Tuple[FIGASolution, Union[int, None]]:
