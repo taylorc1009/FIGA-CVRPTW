@@ -78,20 +78,20 @@ def calculate_cooling(i: int, temperature_max: float, temperature_min: float, te
 
     return cooling_rate
 
-def crossover(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], population: List[Union[MMOEASASolution, OmbukiSolution]], P_crossover: int) -> Union[MMOEASASolution, OmbukiSolution]:
+def crossover(instance: ProblemInstance, parent_one: Union[MMOEASASolution, OmbukiSolution], parent_two: Union[MMOEASASolution, OmbukiSolution], P_crossover: int) -> Union[MMOEASASolution, OmbukiSolution]:
     if rand(1, 100) <= P_crossover:
         # global crossover_invocations
         # crossover_invocations += 1
 
-        return crossover1(instance, copy.deepcopy(I), population)
-    return I
+        return crossover1(instance, copy.deepcopy(parent_one), parent_two)
+    return parent_one
 
-def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution], P_mutation: int, pending_copy: bool) -> Union[MMOEASASolution, OmbukiSolution]:
+def mutation(instance: ProblemInstance, solution: Union[MMOEASASolution, OmbukiSolution], P_mutation: int, pending_copy: bool) -> Union[MMOEASASolution, OmbukiSolution]:
     if rand(1, 100) <= P_mutation:
         # global mutation_invocations
         # mutation_invocations += 1
 
-        solution_copy = copy.deepcopy(I) if pending_copy else I
+        solution_copy = copy.deepcopy(solution) if pending_copy else solution
 
         match rand(1, 10):
             case 1:
@@ -114,7 +114,7 @@ def mutation(instance: ProblemInstance, I: Union[MMOEASASolution, OmbukiSolution
                 return mutation9(instance, solution_copy)
             case 10:
                 return mutation10(instance, solution_copy)
-    return I
+    return solution
 
 def euclidean_distance_dispersion(instance: ProblemInstance, child: Union[MMOEASASolution, OmbukiSolution], parent: Union[MMOEASASolution, OmbukiSolution]) -> float:
     if instance.acceptance_criterion == "MMOEASA":
