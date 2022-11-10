@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
 from argparse import ArgumentParser, RawTextHelpFormatter
 from collections import deque
@@ -155,42 +156,32 @@ if __name__ == '__main__':
             assert args.acceptance_criterion is not None
 
         problem_instance = open_problem_instance(args.algorithm, args.problem_instance, args.acceptance_criterion)
-        all_nondominated_sets, all_hypervolumes = [], []
-
-        for run in range(args.runs):
-            if args.runs > 1:
-                print(f"Started run {run + 1} of {args.runs}")
-
-            nondominated_set, statistics = None, None
-            match args.algorithm:
-                case "MMOEASA":
-                    nondominated_set, statistics = execute_MMOEASA(problem_instance)
-                case "Ombuki-Original":
-                    nondominated_set, statistics = execute_Ombuki(problem_instance, True)
-                case "Ombuki":
-                    nondominated_set, statistics = execute_Ombuki(problem_instance, False)
-                case "FIGA":
-                    nondominated_set, statistics = execute_FIGA(problem_instance)
-
-            # uncomment this code if you'd like a solution to be written to a CSV
-            # solutions can be plotted on a scatter graph in Excel as the x and y coordinates of each vehicle's destinations are outputted and in the order that they are serviced
-            # if nondominated_set:
-            #    write_solution_for_graph(nondominated_set[0])
-
-            if args.runs > 1:
-                all_nondominated_sets.append(nondominated_set)
-                all_hypervolumes.append(calculate_area(problem_instance, nondominated_set, args.acceptance_criterion))
-            else:
-                calculate_area(problem_instance, nondominated_set, args.acceptance_criterion)
-                pareto_fronts = "Front(s):"
-                for solution in nondominated_set:
-                    pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles}{os.linesep}"
-                    solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
-                    for vehicle in solution.vehicles:
-                        pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
-                print(pareto_fronts)
 
         if args.runs > 1:
+            all_nondominated_sets, all_hypervolumes = [], []
+
+            with ProcessPoolExecutor() as executor:
+                match args.algorithm:
+                    case "MMOEASA":
+                        function, alg_args = execute_MMOEASA, (problem_instance,)
+                    case "Ombuki-Original":
+                        function, alg_args = execute_Ombuki, (problem_instance, True)
+                    case "Ombuki":
+                        function, alg_args = execute_Ombuki, (problem_instance, False)
+                    case "FIGA":
+                        function, alg_args = execute_FIGA, (problem_instance,)
+
+                futures = []
+                for _ in range(args.runs):
+                    futures.append(executor.submit(function, *alg_args))
+                print(f"Parallel runs started: {len(futures)} of {args.runs}")
+
+                for run, future in enumerate(as_completed(futures)):
+                    print(f"Finished run {run + 1} of {args.runs}")
+                    nondominated_set, statistics = future.result()
+                    all_nondominated_sets.append(nondominated_set)
+                    all_hypervolumes.append(calculate_area(problem_instance, nondominated_set, args.acceptance_criterion))
+
             is_nondominated = ombuki_is_nondominated if args.acceptance_criterion == "Ombuki" else mmoeasa_is_nondominated
 
             final_nondominated_set = [solution for nondominated_set in all_nondominated_sets for solution in nondominated_set]
@@ -216,3 +207,30 @@ if __name__ == '__main__':
                     del final_nondominated_set[i:]
 
             store_results(args.problem_instance, args.algorithm, all_hypervolumes, all_nondominated_sets, calculate_area(problem_instance, final_nondominated_set, args.acceptance_criterion), final_nondominated_set)
+        else: # when only performing 1 run, it is generally a test run
+            # uncomment this code if you'd like a solution to be written to a CSV
+            # solutions can be plotted on a scatter graph in Excel as the x and y coordinates of each vehicle's destinations are outputted and in the order that they are serviced
+            # if nondominated_set:
+            #    write_solution_for_graph(nondominated_set[0])
+
+            nondominated_set, statistics = None, None
+            match args.algorithm:
+                case "MMOEASA":
+                    nondominated_set, statistics = execute_MMOEASA(problem_instance)
+                case "Ombuki-Original":
+                    nondominated_set, statistics = execute_Ombuki(problem_instance, True)
+                case "Ombuki":
+                    nondominated_set, statistics = execute_Ombuki(problem_instance, False)
+                case "FIGA":
+                    nondominated_set, statistics = execute_FIGA(problem_instance)
+
+            calculate_area(problem_instance, nondominated_set, args.acceptance_criterion)
+
+            pareto_fronts = "Front(s):"
+            for solution in nondominated_set:
+                pareto_fronts += f"{os.linesep}\t{solution.total_distance},{solution.num_vehicles}{os.linesep}"
+                solution.vehicles = sorted(solution.vehicles, key=lambda v: v.destinations[1].node.number)
+                for vehicle in solution.vehicles:
+                    pareto_fronts += '\t' + ','.join([str(d.node.number) for d in vehicle.get_customers_visited()]) + os.linesep
+            print(pareto_fronts)
+
