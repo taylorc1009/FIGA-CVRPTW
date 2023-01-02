@@ -39,7 +39,14 @@ class Solution(ABC):
         if len(self.vehicles) > instance.amount_of_vehicles:
             raise ValueError(f"Too many vehicles: {len(self.vehicles)}")
         elif sum(v.get_num_of_customers_visited() for v in self.vehicles) != len(instance.nodes) - 1: # check if the solution contains the correct amount of destinations, in that it visits all of them (this will also find depot returns mid route)
-            raise ValueError(f"Mismatched amount of destinations: {sum(v.get_num_of_customers_visited() for v in self.vehicles)}")
+            duplicate_nodes = []
+            for v in self.vehicles:
+                for d in v.get_customers_visited():
+                    try:
+                        node_nums.remove(d.node.number)
+                    except:
+                        duplicate_nodes.append(d.node.number)
+            raise ValueError(f"Mismatched amount of destinations: {sum(v.get_num_of_customers_visited() for v in self.vehicles)} {f'(genome contains duplicate non-depot node(s): {str(duplicate_nodes)})' if duplicate_nodes else '(genome contains depot node(s) mid-route)'}")
         elif [v for v in self.vehicles if len(v.destinations) < 3]: # checks if all the routes have at least 3 destinations; routes should always at least depart from and return to the depot, while visiting a customer inbetween
             raise ValueError(f"Number of destinations is not at least 3 in the following vehicle(s): {str([i for i, v in enumerate(self.vehicles) if len(v.destinations) < 3])}")
         elif [v for v in self.vehicles if v.destinations[0].node.number or v.destinations[-1].node.number]: # checks that every route starts and ends at the depot
