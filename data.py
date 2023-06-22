@@ -40,7 +40,10 @@ def open_problem_instance(algorithm: str, filename: str, acceptance_criterion: s
         raise exc from None
 
 def MMOEASA_write_solution_for_validation(solution: Solution, max_capacity: int) -> None:
-    relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else str(Path(__file__).parent.resolve()) + "\\MMOEASA\\validator\\solution.csv"
+    if getattr(sys, "frozen", False):
+        exc = RuntimeError("Attempted to write a solution for validation, but the app appears to be compiled. This is not recommended as compiled apps are considered to be \"production\" apps and this functionality is intended for debugging.")
+        raise exc
+    relative_path = str(Path(__file__).parent.resolve()) + "\\MMOEASA\\validator\\solution.csv"
 
     with open(relative_path, "w+") as csv:
         csv.write(f"{max_capacity}\n")
@@ -53,7 +56,11 @@ def MMOEASA_write_solution_for_validation(solution: Solution, max_capacity: int)
                 csv.write(f"{node.number},{node.x},{node.y},{node.demand},{node.ready_time},{node.due_date},{node.service_duration}\n")
 
 def write_solution_for_graph(solution: Solution) -> None:
-    relative_path = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else str(Path(__file__).parent.resolve()) + "\\graph_solution.csv"
+    if getattr(sys, "frozen", False):
+        exc = RuntimeError("Attempted to write a solution for plotting on a graph, but the app appears to be compiled. This is not recommended as compiled apps are considered to be \"production\" apps and this functionality is intended for non-production purposes.")
+        raise exc
+
+    relative_path = str(Path(__file__).parent.resolve()) + f"\\for_graphs\\graph_solution.csv"
 
     with open(relative_path, "w+") as csv:
         max_len = max([len(v.destinations) for v in solution.vehicles])
